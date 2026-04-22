@@ -1,0 +1,38 @@
+﻿# 高危关键词列表
+# 每行一个，大小写不敏感匹配，支持正则
+# 命中任意一条 → risk_level=high → 触发 preflight Step 2/3
+#
+# 注意：本清单是通用示例，仅覆盖常见的高风险操作模式。
+# 使用者应根据自身系统的具体技术栈和业务场景进行扩展，例如：
+#   - 特定业务服务的停止命令
+#   - 特定数据库的危险 DDL（如 ALTER TABLE、RENAME DATABASE）
+#   - 特定容器或应用的销毁命令
+# 扩展时建议在本地 inventory 目录维护附加清单，而不是直接修改本文件。
+
+DELETE
+DROP
+TRUNCATE
+rm -rf
+rmdir
+shutdown
+poweroff
+reboot
+halt
+migrate
+alter table
+alter database
+kill -9
+pkill -9
+iptables -F
+systemctl stop
+systemctl disable
+docker rm
+docker rmi
+docker stop
+docker kill
+crontab -r
+passwd
+userdel
+groupdel
+chmod 777
+chown root

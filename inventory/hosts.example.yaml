@@ -1,0 +1,78 @@
+﻿# inventory/hosts.example.yaml
+# 复制为 hosts.yaml 并填写你的实际环境，此文件可提交到 Git（不含密码）。
+# 密码统一放 config/secrets.env（已加入 .gitignore）。
+#
+# 变量命名约定：
+#   ${VAR_NAME}  —— 来自 secrets.env 的凭据变量
+#   ${NODE_XXX}  —— 来自本文件的主机/IP 变量（在 skill 脚本中引用）
+#
+# skill 脚本中只写 ${NODE_DB}、${KAFKA_BOOTSTRAP} 等变量名，不硬编码 IP。
+# 切换环境时，只修改本文件，skill 保持不变。
+
+# ── 全局 SSH 默认 ─────────────────────────────────────────────────
+ssh_defaults:
+  user: "${SSH_DEFAULT_USER}"
+  password_env: "SSH_DEFAULT_PASS"   # 指向 secrets.env 中的变量名
+  connect_timeout: 5
+  strict_host_key_checking: false
+
+# ── 主机清单 ──────────────────────────────────────────────────────
+# 每台主机声明 alias（供 skill 脚本中 ${NODE_XXX} 引用）、IP、角色、关键服务。
+# alias 名称是约定，可根据你的环境自行调整（但改后引用该 alias 的 skill 变量名也要跟着改）。
+
+nodes:
+  - alias: NODE_CONTROL
+    ip: "<NODE_CONTROL_IP>"           # 替换为实际 IP
+    role: "control"
+    description: "主控节点，运行 Hermes Agent 和监控服务"
+    services:
+      - hermes-gateway
+      # 添加此节点上运行的其他服务
+
+  - alias: NODE_APP
+    ip: "<NODE_APP_IP>"
+    role: "application"
+    description: "应用服务节点"
+    ssh_user: "${SSH_DEFAULT_USER}"
+    sudo: true
+    services:
+      # 添加此节点上运行的应用服务
+
+  - alias: NODE_DB
+    ip: "<NODE_DB_IP>"
+    role: "database"
+    description: "数据库节点"
+    services:
+      # 添加此节点上运行的数据库服务
+
+  # 按需添加更多节点，遵循 NODE_<角色> 命名约定
+
+# ── 服务端点 ──────────────────────────────────────────────────────
+# 在 skill 中通过变量引用，不硬编码 IP:端口组合。
+# 按你实际使用的服务填写，以下为结构示例。
+
+services:
+  # 示例：消息队列
+  # kafka:
+  #   bootstrap_servers: "${NODE_DB}:9092,${NODE_APP}:9092"
+  #   install_path: "/usr/local/kafka"
+  #   data_dir: "/data/kafka-logs"
+
+  # 示例：数据库
+  # my_database:
+  #   host: "${NODE_DB}"
+  #   port: 5432
+  #   backup_dir: "/data/backup/my_database"
+
+  # 示例：监控系统
+  # monitoring:
+  #   server_host: "${NODE_CONTROL}"
+  #   api_url: "http://${NODE_CONTROL}/monitoring/api"
+  #   api_user_env: "MON_MYMONITORING_USER"
+  #   api_pass_env: "MON_MYMONITORING_PASS"
+
+# ── 备份配置 ──────────────────────────────────────────────────────
+backup:
+  primary_store: "${NODE_CONTROL}"    # 备份文件集中存放节点
+  # secondary_store: "${NODE_APP}"    # 可选：二级备份节点
+  retention_days: 7                   # 默认保留天数（各 skill 可覆盖）

@@ -111,14 +111,14 @@ Themis/
 
 **给人类**
 
-复制这段 prompt 给你的 LLM Agent（Claude Code、Cursor、Amp 等）：
+复制这段 prompt 给你的 Hermes Agent：
 
 ```
 按照这里的说明安装和配置 Themis：
 https://raw.githubusercontent.com/gundamff/Themis/main/INSTALL.md
 ```
 
-**给 LLM Agent**
+**给 Hermes Agent**
 
 获取安装指南并执行：
 
@@ -132,7 +132,7 @@ curl -s https://raw.githubusercontent.com/gundamff/Themis/main/INSTALL.md
 
 **给人类**
 
-复制这段 prompt 给你的 LLM Agent：
+复制这段 prompt 给你的 Hermes Agent：
 
 ```
 按照这里的说明，将我现有的 Hermes Agent 配置迁移到 Themis 框架：
@@ -141,7 +141,7 @@ https://raw.githubusercontent.com/gundamff/Themis/main/MIGRATION.md
 我当前的 Hermes 配置在：~/.hermes/（如果路径不同请调整）
 ```
 
-**给 LLM Agent**
+**给 Hermes Agent**
 
 获取迁移指南并执行：
 

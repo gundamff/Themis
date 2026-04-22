@@ -111,14 +111,14 @@ The `observe/`, `diagnose/`, and `backup/` skills are **methodology files** — 
 
 **For Humans**
 
-Copy and paste this prompt to your LLM agent (Claude Code, Cursor, Amp, etc.):
+Copy and paste this prompt to your Hermes Agent:
 
 ```
 Install and configure Themis by following the instructions here:
 https://raw.githubusercontent.com/gundamff/Themis/main/INSTALL.md
 ```
 
-**For LLM Agents**
+**For Hermes Agents**
 
 Fetch the installation guide and follow it:
 
@@ -132,7 +132,7 @@ curl -s https://raw.githubusercontent.com/gundamff/Themis/main/INSTALL.md
 
 **For Humans**
 
-Copy and paste this prompt to your LLM agent:
+Copy and paste this prompt to your Hermes Agent:
 
 ```
 Migrate my existing Hermes Agent setup to the Themis framework by following the instructions here:
@@ -141,7 +141,7 @@ https://raw.githubusercontent.com/gundamff/Themis/main/MIGRATION.md
 My current Hermes config is at: ~/.hermes/  (adjust the path if different)
 ```
 
-**For LLM Agents**
+**For Hermes Agents**
 
 Fetch the migration guide and follow it:
 

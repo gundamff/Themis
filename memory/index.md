@@ -1,4 +1,4 @@
-﻿# memory/index.md — Skills 索引
+# memory/index.md — Skills 索引
 # Agent 在每轮会话中加载此文件，用于快速定位 skill。
 # 触发词命中时自动加载对应 skill，无需手动指定。
 
@@ -31,7 +31,7 @@
 
 | 触发词 | Skill |
 |--------|-------|
-| 观测、监控、巡检、健康检查、告警、系统状态、observe、health check、monitoring | `skills/observe` |
+| 观测、监控、巡检、健康检查、告警、系统状态、observe、health check、monitoring、变更感知 | `skills/observe` |
 
 ---
 
@@ -39,7 +39,7 @@
 
 | 触发词 | Skill |
 |--------|-------|
-| 诊断、故障、排查、根因分析、问题定位、diagnose、故障诊断、根因 | `skills/diagnose` |
+| 诊断、故障、排查、根因分析、问题定位、diagnose、故障诊断、根因、影响评估、现场保留、变更关联、时间线、证据甄别、复盘、incident response | `skills/diagnose` |
 
 ---
 

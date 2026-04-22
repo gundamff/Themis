@@ -105,6 +105,56 @@ Themis/
 
 ---
 
+## 懒得看文档？让 Agent 帮你搞定
+
+### 全新安装
+
+**给人类**
+
+复制这段 prompt 给你的 LLM Agent（Claude Code、Cursor、Amp 等）：
+
+```
+按照这里的说明安装和配置 Themis：
+https://raw.githubusercontent.com/gundamff/Themis/main/INSTALL.md
+```
+
+**给 LLM Agent**
+
+获取安装指南并执行：
+
+```bash
+curl -s https://raw.githubusercontent.com/gundamff/Themis/main/INSTALL.md
+```
+
+---
+
+### 从已有 Hermes 配置迁移
+
+**给人类**
+
+复制这段 prompt 给你的 LLM Agent：
+
+```
+按照这里的说明，将我现有的 Hermes Agent 配置迁移到 Themis 框架：
+https://raw.githubusercontent.com/gundamff/Themis/main/MIGRATION.md
+
+我当前的 Hermes 配置在：~/.hermes/（如果路径不同请调整）
+```
+
+**给 LLM Agent**
+
+获取迁移指南并执行：
+
+```bash
+curl -s https://raw.githubusercontent.com/gundamff/Themis/main/MIGRATION.md
+```
+
+迁移指南包含 4 个阶段：骨架文件 → skill 迁移 → memory 精简 → 验证。
+覆盖凭据外置、IP 变量化、frontmatter 合规检查。
+完成后运行 `bash scripts/verify.sh` 验证。
+
+---
+
 ## 开始使用
 
 ### Step 1：初始化

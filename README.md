@@ -105,6 +105,56 @@ The `observe/`, `diagnose/`, and `backup/` skills are **methodology files** — 
 
 ---
 
+## Too Lazy to Read? Let an Agent Do It
+
+### Fresh Install
+
+**For Humans**
+
+Copy and paste this prompt to your LLM agent (Claude Code, Cursor, Amp, etc.):
+
+```
+Install and configure Themis by following the instructions here:
+https://raw.githubusercontent.com/gundamff/Themis/main/INSTALL.md
+```
+
+**For LLM Agents**
+
+Fetch the installation guide and follow it:
+
+```bash
+curl -s https://raw.githubusercontent.com/gundamff/Themis/main/INSTALL.md
+```
+
+---
+
+### Migrating from an Existing Hermes Setup
+
+**For Humans**
+
+Copy and paste this prompt to your LLM agent:
+
+```
+Migrate my existing Hermes Agent setup to the Themis framework by following the instructions here:
+https://raw.githubusercontent.com/gundamff/Themis/main/MIGRATION.md
+
+My current Hermes config is at: ~/.hermes/  (adjust the path if different)
+```
+
+**For LLM Agents**
+
+Fetch the migration guide and follow it:
+
+```bash
+curl -s https://raw.githubusercontent.com/gundamff/Themis/main/MIGRATION.md
+```
+
+The migration guide covers 4 phases: skeleton files → skill migration → memory cleanup → validation.
+It handles credential externalization, IP variable substitution, and frontmatter compliance.
+Complete the guide before running `bash scripts/verify.sh`.
+
+---
+
 ## Getting Started
 
 ### Step 1: Initialize

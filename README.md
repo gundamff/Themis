@@ -262,9 +262,9 @@ bash scripts/verify.sh
 
 ## Documentation
 
-- [Installation Guide](INSTALL.md)
-- [Migration Guide](MIGRATION.md) — Migrate from an existing Hermes setup
-- [The Three Laws](SOUL.md) — Immutable core
+- [Installation Guide](INSTALL.en.md)
+- [Migration Guide](MIGRATION.en.md) — Migrate from an existing Hermes setup
+- [The Three Laws](SOUL.en.md) — Immutable core
 
 ---
 

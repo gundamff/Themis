@@ -165,6 +165,8 @@ cd Themis
 bash scripts/install.sh
 ```
 
+The script copies `.example` templates, ensures required `.gitignore` entries, creates the audit log directory, and runs `scripts/verify.sh`.
+
 ### Step 2: Fill in your environment
 
 ```bash

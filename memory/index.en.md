@@ -6,7 +6,7 @@
 
 - Each row format: `trigger keyword → skill path`
 - The Agent fuzzy-matches user input; on match, it loads the corresponding SKILL.md
-- A single request may trigger multiple skills (intersection, persona permission constraints take priority)
+- A single request may trigger multiple skills (intersection; Profiles isolation constraints take priority)
 
 ---
 

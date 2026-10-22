@@ -75,6 +75,13 @@ platforms:
 # 生产要求：浏览器/web 工具按需禁用（见 observe profile）；
 # 容器网络使用防火墙/egress allowlist；禁止生产 HERMES_YOLO_MODE=1。
 
+# ── MCP（供应链）──────────────────────────────────────────────────
+# 生产仅启用 security/mcp-allowlist.yaml 中的 server；禁止 @latest 与会话临时安装。
+# 见 skills/security/mcp-supply-chain 与 attestations/mcp-allowlist.*.md。
+
+# ── 审批票据（规程）────────────────────────────────────────────────
+# 高危执行须 argv_digest 绑定的 Approval Ticket；见 security/schemas/approval-ticket.example.yaml。
+
 # ── 审计 ──────────────────────────────────────────────────────────
 audit:
   sink: "/var/log/hermes/audit.jsonl"

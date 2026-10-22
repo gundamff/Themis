@@ -1,0 +1,16 @@
+# 生产 MCP 批准清单 — 复制为 mcp-allowlist.yaml 并按环境填写
+# 禁止会话内临时安装；禁止 @latest；工具描述变更须重审
+
+servers:
+  - name: example-readonly-docs
+    version: "1.2.3"
+    # integrity: "sha256:..."
+    purpose: "read-only documentation lookup"
+    owner: "platform-ops"
+    last_reviewed: "2026-10-22"
+
+policy:
+  allow_ad_hoc_install: false
+  allow_latest_tag: false
+  require_redescribe_review: true
+  require_credential_filtering: true   # Hermes MCP credential filtering 须开启

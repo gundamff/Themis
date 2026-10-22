@@ -59,11 +59,24 @@ find /path/to/backup -name "*.gz" -mtime -1 | head -5
   trace_id: <uuid>
   ```
 
-### Step 3：人工审批请求
+### Step 3：人工审批请求 → 签发审批票据
 
 生成预检报告（见下方格式），发送给 approver persona 或通知运维通道。
 
-等待 `human_approved = true` 信号后，继续 Step 4。
+审批通过后必须签发 **Approval Ticket**（schema：`security/schemas/approval-ticket.example.yaml`），至少包含：
+
+| 字段 | 含义 |
+|------|------|
+| `ticket_id` / `trace_id` | 唯一票据与预检关联 |
+| `actor` | 批准人 |
+| `tool` | 逻辑工具名 |
+| `argv_digest` | 规范化命令/参数的 sha256；**不得**口头批准另一条命令 |
+| `expires_at` | 过期时间（建议 ≤ 30 分钟） |
+| `nonce` | 防重放 |
+| `consumed` | 初始 `false`；执行成功后置 `true` |
+| `step_up_mfa` | `critical` 风险须为 `true` |
+
+等待 `human_approved = true` **且**持有未过期未消费票据后，继续 Step 4。
 
 **明确阻断（不等待审批，直接拒绝）的情况：**
 - 操作要求禁用审计服务
@@ -73,10 +86,11 @@ find /path/to/backup -name "*.gz" -mtime -1 | head -5
 - 操作要求关闭上下文/promptware 扫描或暴露面检查
 - 操作要求修改 SECURITY.md
 - 操作要求对公网暴露管理面且未提供有效例外声明
+- 操作要求启用 `HERMES_YOLO_MODE=1` 于生产
 
 ### Step 4：生成审计日志条目
 
-调用 `scripts/audit_logger.py`（见下方），写入 `audit_sink`（来自 config.yaml）。
+调用 `scripts/audit_logger.py`（见下方），写入 `audit_sink`（来自 config.yaml）。审计须记录 `approval_ticket_id` 与 `argv_digest`（见 tool 事件 schema）。
 
 ```bash
 python3 skills/safety/preflight-and-audit/scripts/audit_logger.py \
@@ -90,9 +104,18 @@ python3 skills/safety/preflight-and-audit/scripts/audit_logger.py \
   --params '{}'
 ```
 
-### Step 5：执行并记录结果
+### Step 5：校验票据后执行并记录结果
 
-操作完成后，更新审计条目的 `result` 字段为 `executed|failed`，补充实际输出摘要。
+执行前校验（任一失败 → **阻断**，不得执行）：
+
+1. 票据存在且 `consumed == false`
+2. 当前时间 `< expires_at`
+3. 即将执行命令的 `argv_digest` 与票据完全一致
+4. `critical` 时 `step_up_mfa == true`
+
+说明：即便 `terminal.backend=docker` 导致 Hermes 跳过部分危险命令提示，**本校验仍然强制**。
+
+操作完成后：将票据 `consumed=true`；更新审计 `result` 为 `executed|failed`；输出摘要须脱敏（见 `output-and-audit-guards`）。
 
 ---
 
@@ -105,14 +128,19 @@ python3 skills/safety/preflight-and-audit/scripts/audit_logger.py \
 - **时间**: <ISO8601>
 - **操作者**: hermes/executor
 - **操作描述**: <具体操作>
-- **目标系统**: <IP/服务名>
+- **目标系统**: <抽象目标，勿写真实口令>
 - **风险等级**: high
+- **tool**: <逻辑工具名>
+- **argv_digest**: sha256:<规范化参数哈希>
+- **expires_at**: <ISO8601，建议 ≤30m>
 - **触发关键词**: <命中的关键词>
 - **备份验证**: ✓ 已验证（最近备份时间: <时间>）
 - **可逆性**: 不可逆 / 可逆
 - **影响范围**: <受影响的服务/数据>
+- **step_up_mfa**: 需要 / 不需要
 
-请 approver 在 30 分钟内响应。超时视为拒绝。
+请 approver 在 30 分钟内响应并签发票据。超时视为拒绝。
+批准仅对该 argv_digest 有效；参数变更须重新预检。
 ```
 
 ---
@@ -154,6 +182,8 @@ python3 skills/safety/preflight-and-audit/scripts/audit_logger.py \
   "risk_level": "low | medium | high | critical",
   "backup_verified": true,
   "human_approved": true,
+  "approval_ticket_id": "<uuid4>",
+  "argv_digest": "sha256:<...>",
   "result": "executed | blocked | pending_approval | failed",
   "parameters": {},
   "signature": "<sha256(所有字段序列化后的哈希)>"

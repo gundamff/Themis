@@ -70,6 +70,21 @@ description: >
 - [ ] 文件传输、端口转发和提权单独审批
 - [ ] 退出后吊销临时凭据并关闭残留会话
 
+### Agent / 沙箱工作负载（容器逃逸面 · CDK 同族）
+
+Hermes `terminal.backend: docker` 把命令放进容器，**不等于**安全边界已成立。错误挂载会把隔离挖空。
+
+生产 Agent 沙箱必须满足：
+
+- [ ] **禁止** `privileged: true`（无书面时限例外）
+- [ ] **禁止** 挂载宿主机 `docker.sock`（或等价容器引擎 socket）
+- [ ] **禁止** 默认 `hostNetwork` / `hostPID` / 挂载宿主机根 `/`
+- [ ] 能力集裁剪；偏好只读根文件系统与非 root
+- [ ] 业务变更仍须审批票据（容器内危险命令提示被跳过 ≠ 已批准）
+- [ ] 填写 `security/attestations/sandbox-not-privileged.<环境>.md`
+
+任一项不满足 → 按集权面失陷的下一步（逃逸/横向）评估为 `critical`。
+
 ## 验证“一拿全网”是否被阻断
 
 1. 选择一个抽象集权面，假设其应用层身份已失陷。

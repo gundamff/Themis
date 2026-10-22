@@ -62,6 +62,16 @@ Themis 叠加而非替代 Hermes 原生安全能力。须优先使用：
 
 细节以 [Hermes Security](https://hermes-agent.nousresearch.com/docs/user-guide/security) 与 Toolsets Reference 为准。
 
+## 审批票据（P1）
+
+高危执行须持有 `security/schemas/approval-ticket.example.yaml` 语义的票据：`argv_digest` 绑定精确参数、`expires_at` 过期、`nonce` 防重放、执行后 `consumed`。参数变更必须重新预检。细则见 `skills/safety/preflight-and-audit`。
+
+## MCP 与输出护栏（P1）
+
+- 生产 MCP 仅允许 `security/mcp-allowlist.yaml`（见 example）；禁临时安装与 `@latest`；描述变更须重审（`skills/security/mcp-supply-chain`）。
+- 回复与 tool 结果不得回显可复用密钥；审计最低字段见 `skills/security/output-and-audit-guards`。
+- 对抗静态用例：`tests/adversarial/cases.md`；`bash scripts/verify-adversarial.sh`。
+
 ## 禁止事项
 
 - 禁止默认口令、共享口令或可复用明文密钥。
@@ -70,3 +80,5 @@ Themis 叠加而非替代 Hermes 原生安全能力。须优先使用：
 - 禁止空认证、空 token、仅靠前端隐藏敏感接口。
 - 禁止只读 profile 持有生产写凭据，或单实例充当全网超级管理员。
 - 禁止生产 Agent 任意出站（缺 egress allowlist 且未禁用外联工具）。
+- 禁止无票据或票据与 `argv_digest` 不符时执行高危变更。
+- 禁止生产沙箱 `privileged` 或挂载 `docker.sock`（无书面例外）。

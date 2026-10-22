@@ -59,11 +59,24 @@ find /path/to/backup -name "*.gz" -mtime -1 | head -5
   trace_id: <uuid>
   ```
 
-### Step 3: Human Approval Request
+### Step 3: Human Approval → Issue Approval Ticket
 
 Generate a preflight report (see format below) and send it to the approver persona or notify the operations channel.
 
-Wait for the `human_approved = true` signal before proceeding to Step 4.
+On approval, issue an **Approval Ticket** (`security/schemas/approval-ticket.example.yaml`) including at least:
+
+| Field | Meaning |
+|-------|---------|
+| `ticket_id` / `trace_id` | Unique ticket tied to preflight |
+| `actor` | Approver |
+| `tool` | Logical tool name |
+| `argv_digest` | sha256 of canonical argv; **never** approve a different command verbally |
+| `expires_at` | Expiry (prefer ≤ 30 minutes) |
+| `nonce` | Anti-replay |
+| `consumed` | Start `false`; set `true` after successful execution |
+| `step_up_mfa` | Must be `true` when `critical` |
+
+Wait for `human_approved = true` **and** a valid unexpired, unconsumed ticket before Step 4.
 
 **Hard-block scenarios (reject immediately, do not wait for approval):**
 - The operation requests disabling the audit service
@@ -73,10 +86,11 @@ Wait for the `human_approved = true` signal before proceeding to Step 4.
 - The operation requests disabling context/promptware scanning or exposure checks
 - The operation requests modifying SECURITY.md
 - The operation exposes a management plane to the public Internet without a valid exception declaration
+- The operation requests enabling `HERMES_YOLO_MODE=1` in production
 
 ### Step 4: Generate Audit Log Entry
 
-Invoke `scripts/audit_logger.py` (see below) to write to `audit_sink` (from config.yaml).
+Invoke `scripts/audit_logger.py` (see below) to write to `audit_sink` (from config.yaml). Audit MUST record `approval_ticket_id` and `argv_digest`.
 
 ```bash
 python3 skills/safety/preflight-and-audit/scripts/audit_logger.py \
@@ -90,9 +104,18 @@ python3 skills/safety/preflight-and-audit/scripts/audit_logger.py \
   --params '{}'
 ```
 
-### Step 5: Execute and Record Result
+### Step 5: Validate Ticket, Then Execute and Record
 
-After the operation completes, update the audit entry's `result` field to `executed|failed` and append a summary of the actual output.
+Before execution, validate (any failure → **block**):
+
+1. Ticket exists and `consumed == false`
+2. Now `< expires_at`
+3. `argv_digest` of the command about to run matches the ticket exactly
+4. For `critical`, `step_up_mfa == true`
+
+Note: even if `terminal.backend=docker` causes Hermes to skip some dangerous-command prompts, **these checks still apply**.
+
+After completion: mark ticket `consumed=true`; set audit `result` to `executed|failed`; redact output summaries (`output-and-audit-guards`).
 
 ---
 
@@ -105,14 +128,19 @@ After the operation completes, update the audit entry's `result` field to `execu
 - **Time**: <ISO8601>
 - **Operator**: hermes/executor
 - **Operation Description**: <specific operation>
-- **Target System**: <IP/service name>
+- **Target System**: <abstract target; never real passwords>
 - **Risk Level**: high
+- **tool**: <logical tool name>
+- **argv_digest**: sha256:<canonical argv hash>
+- **expires_at**: <ISO8601, prefer ≤30m>
 - **Triggered Keyword**: <matched keyword>
 - **Backup Verification**: ✓ Verified (most recent backup: <timestamp>)
 - **Reversibility**: Irreversible / Reversible
 - **Impact Scope**: <affected services/data>
+- **step_up_mfa**: required / not required
 
-The approver must respond within 30 minutes. Timeout is treated as rejection.
+The approver must respond within 30 minutes and issue a ticket. Timeout is rejection.
+Approval is valid only for that argv_digest; parameter changes require a new preflight.
 ```
 
 ---
@@ -154,6 +182,8 @@ See `references/high_risk_keywords.txt` (one keyword per line, regex supported).
   "risk_level": "low | medium | high | critical",
   "backup_verified": true,
   "human_approved": true,
+  "approval_ticket_id": "<uuid4>",
+  "argv_digest": "sha256:<...>",
   "result": "executed | blocked | pending_approval | failed",
   "parameters": {},
   "signature": "<sha256 hash of serialized all fields>"

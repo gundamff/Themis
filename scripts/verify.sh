@@ -262,7 +262,9 @@ check_sec_skills() {
     skills/security/threat-model/SKILL.md \
     skills/security/credentials-hygiene/SKILL.md \
     skills/security/exposure-control/SKILL.md \
-    skills/security/incident-response/SKILL.md
+    skills/security/incident-response/SKILL.md \
+    skills/security/mcp-supply-chain/SKILL.md \
+    skills/security/output-and-audit-guards/SKILL.md
   do
     if [ -f "$skill" ]; then ok "SEC-SKILL: $skill"; else red "SEC-SKILL: 缺少 $skill"; fi
   done
@@ -292,6 +294,94 @@ check_sec_secrets() {
   fi
 }
 
+check_sec_sandbox() {
+  # --- SEC-SANDBOX (P1-9) ---
+  if [ -f "security/attestations/sandbox-not-privileged.example.md" ]; then
+    ok "SEC-SANDBOX: sandbox-not-privileged attestation 模板存在"
+  else
+    red "SEC-SANDBOX: 缺少 security/attestations/sandbox-not-privileged.example.md"
+  fi
+  if grep -qiE 'docker\.sock|privileged' skills/security/privileged-plane/SKILL.md 2>/dev/null; then
+    ok "SEC-SANDBOX: privileged-plane 含沙箱/逃逸专条"
+  else
+    red "SEC-SANDBOX: privileged-plane 缺少 privileged/docker.sock 专条"
+  fi
+}
+
+check_sec_ticket() {
+  # --- SEC-TICKET (P1-5) ---
+  if [ -f "security/schemas/approval-ticket.example.yaml" ]; then
+    ok "SEC-TICKET: approval-ticket schema 存在"
+  else
+    red "SEC-TICKET: 缺少 security/schemas/approval-ticket.example.yaml"
+  fi
+  local pf="skills/safety/preflight-and-audit/SKILL.md"
+  if [ -f "$pf" ] && grep -qF "argv_digest" "$pf" && grep -qF "expires_at" "$pf"; then
+    ok "SEC-TICKET: preflight 含 argv_digest/expires_at"
+  else
+    red "SEC-TICKET: preflight 缺少 argv_digest 或 expires_at"
+  fi
+}
+
+check_sec_mcp() {
+  # --- SEC-MCP (P1-6) ---
+  local al="security/mcp-allowlist.example.yaml"
+  if [ -f "$al" ]; then
+    ok "SEC-MCP: mcp-allowlist 模板存在"
+    if grep -qE 'allow_ad_hoc_install:\s*false' "$al" && grep -qE 'allow_latest_tag:\s*false' "$al"; then
+      ok "SEC-MCP: 禁临时安装与 @latest"
+    else
+      red "SEC-MCP: allowlist 未将 ad_hoc/@latest 设为 false"
+    fi
+  else
+    red "SEC-MCP: 缺少 $al"
+  fi
+  if [ -f "skills/security/mcp-supply-chain/SKILL.md" ]; then
+    ok "SEC-MCP: mcp-supply-chain skill 存在"
+  else
+    red "SEC-MCP: 缺少 skills/security/mcp-supply-chain/SKILL.md"
+  fi
+  if [ -f "security/attestations/mcp-allowlist.example.md" ]; then
+    ok "SEC-MCP: mcp-allowlist attestation 模板存在"
+  else
+    red "SEC-MCP: 缺少 security/attestations/mcp-allowlist.example.md"
+  fi
+}
+
+check_sec_output() {
+  # --- SEC-OUTPUT (P1-8) ---
+  if [ -f "skills/security/output-and-audit-guards/SKILL.md" ]; then
+    ok "SEC-OUTPUT: output-and-audit-guards skill 存在"
+  else
+    red "SEC-OUTPUT: 缺少 skills/security/output-and-audit-guards/SKILL.md"
+  fi
+  local sch="security/schemas/audit-tool-event.example.json"
+  if [ -f "$sch" ] && grep -qF "tool_name" "$sch"; then
+    ok "SEC-OUTPUT: audit-tool-event schema 含 tool_name"
+  else
+    red "SEC-OUTPUT: 缺少含 tool_name 的 audit-tool-event schema"
+  fi
+}
+
+check_sec_adv() {
+  # --- SEC-ADV (P1-7) ---
+  if [ ! -f "tests/adversarial/cases.md" ]; then
+    red "SEC-ADV: 缺少 tests/adversarial/cases.md"
+  else
+    ok "SEC-ADV: adversarial cases 存在"
+  fi
+  if [ ! -f "scripts/verify-adversarial.sh" ]; then
+    red "SEC-ADV: 缺少 scripts/verify-adversarial.sh"
+    return
+  fi
+  ok "SEC-ADV: verify-adversarial.sh 存在"
+  if bash scripts/verify-adversarial.sh; then
+    ok "SEC-ADV: 对抗静态检查通过"
+  else
+    red "SEC-ADV: 对抗静态检查失败"
+  fi
+}
+
 echo ""
 echo "--- [5/5] SEC 安全门禁"
 check_sec_soul
@@ -303,9 +393,14 @@ check_sec_profile
 check_sec_observe
 check_sec_yolo
 check_sec_egress
+check_sec_sandbox
+check_sec_ticket
+check_sec_mcp
+check_sec_output
 check_sec_skills
 check_sec_default
 check_sec_secrets
+check_sec_adv
 
 # ── 结果汇总 ──────────────────────────────────────────────────────
 echo ""

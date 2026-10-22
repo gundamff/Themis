@@ -70,6 +70,21 @@ The goal is not an obscure entry point. A single compromised plane must still fa
 - [ ] File transfer, forwarding, and elevation require separate approval
 - [ ] Revoke temporary credentials and residual sessions on exit
 
+### Agent / Sandbox Workloads (container escape · CDK-class)
+
+Hermes `terminal.backend: docker` places commands in a container; that alone does **not** establish a security boundary. Bad mounts erase isolation.
+
+Production Agent sandboxes MUST:
+
+- [ ] **Forbid** `privileged: true` (unless a time-bounded written exception exists)
+- [ ] **Forbid** mounting host `docker.sock` (or equivalent engine sockets)
+- [ ] **Forbid** default `hostNetwork` / `hostPID` / mounting host root `/`
+- [ ] Drop capabilities; prefer read-only root FS and non-root
+- [ ] Still require an approval ticket for business changes (skipped dangerous-command prompts inside containers ≠ approved)
+- [ ] Complete `security/attestations/sandbox-not-privileged.<env>.md`
+
+Any miss is assessed as `critical` under post-compromise escape/lateral movement.
+
 ## Verify Domain Takeover Is Blocked
 
 1. Select an abstract plane and assume its application identity is lost.

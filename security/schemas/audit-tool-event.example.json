@@ -1,0 +1,13 @@
+{
+  "event_type": "tool_call",
+  "trace_id": "00000000-0000-4000-8000-000000000002",
+  "timestamp": "2026-10-22T00:00:00Z",
+  "tool_name": "terminal",
+  "args_digest": "sha256:REPLACE_WITH_DIGEST",
+  "outcome": "blocked",
+  "approval_ticket_id": "00000000-0000-4000-8000-000000000001",
+  "argv_digest": "sha256:REPLACE_WITH_DIGEST",
+  "operator": "hermes/executor",
+  "redaction": "secrets_stripped",
+  "notes": "example only — never log raw passwords or tokens"
+}

@@ -209,4 +209,4 @@ ASI01 Goal Hijack **P**；ASI02 Tool Misuse **P**；ASI03 Identity Abuse **P/Y**
 2. 按 §7 P0 开「对齐外部基线」变更（仍可大一统或小 PR）  
 3. P1 单开 change，避免与文档对齐纠缠  
 
-**本文件状态：** 慢对照完成；**尚未**根据本表改业务代码。
+**本文件状态：** 慢对照完成；**P0 + 方案 C** 已落地（SOUL 短铁律、`disabled_toolsets`/`approvals.deny`/docker、egress+YOLO 条文与 attestation、`verify.sh` SEC-* 门禁）。P1 另开。

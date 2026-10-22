@@ -112,13 +112,22 @@ check_sec_soul() {
     red "SEC-SOUL: SECURITY.md 不存在"
   else
     for required in "immutable: true" "override: forbidden" "load: always" \
-      "身份最小权限" "密钥不落明文" "禁止空认证" "管理面零公网" "读写隔离" "不可静默关闭防护"; do
+      "身份最小权限" "密钥不落明文" "禁止空认证" "管理面零公网" "读写隔离" \
+      "不可静默关闭防护" "外联受控" "HERMES_YOLO_MODE"; do
       if grep -qF "$required" "SECURITY.md"; then
         ok "SEC-SOUL: 含 $required"
       else
         red "SEC-SOUL: 缺少 $required"
       fi
     done
+  fi
+  # 方案 C：SOUL 须含运行时安全短铁律
+  if [ -f "SOUL.md" ]; then
+    if grep -qF "安全铁律（运行时摘要" "SOUL.md" && grep -qF "外联受控" "SOUL.md"; then
+      ok "SEC-SOUL: SOUL.md 含运行时安全摘要（方案 C）"
+    else
+      red "SEC-SOUL: SOUL.md 缺少运行时安全摘要或外联受控"
+    fi
   fi
 }
 
@@ -155,6 +164,86 @@ check_sec_profile() {
   for d in templates/profiles/themis-observe templates/profiles/themis-execute; do
     if [ -d "$d" ]; then ok "SEC-PROFILE: $d 存在"; else red "SEC-PROFILE: 缺少 $d"; fi
   done
+}
+
+check_sec_observe() {
+  # --- SEC-OBSERVE: 只读落到 Hermes 原生键 ---
+  local obs="templates/profiles/themis-observe/config.snippet.yaml"
+  if [ ! -f "$obs" ]; then
+    red "SEC-OBSERVE: 缺少 $obs"
+    return
+  fi
+  if ! grep -qE 'disabled_toolsets:' "$obs"; then
+    red "SEC-OBSERVE: 缺少 agent.disabled_toolsets"
+  else
+    for ts in browser web code_execution; do
+      if grep -qE "^\s*-\s*${ts}\s*$" "$obs"; then
+        ok "SEC-OBSERVE: disabled $ts"
+      else
+        red "SEC-OBSERVE: 未禁用 toolset $ts"
+      fi
+    done
+  fi
+  if grep -qE 'approvals:' "$obs" && grep -A30 -E '^approvals:' "$obs" | grep -qE 'deny:'; then
+    ok "SEC-OBSERVE: 含 approvals.deny"
+  else
+    red "SEC-OBSERVE: 缺少 approvals.deny"
+  fi
+  if grep -qE 'backend:\s*docker' "$obs"; then
+    ok "SEC-OBSERVE: terminal.backend docker"
+  else
+    red "SEC-OBSERVE: 未默认 docker 后端"
+  fi
+}
+
+check_sec_deny() {
+  # --- SEC-DENY: 全局模板须有 approvals.deny ---
+  if [ -f "config/config.example.yaml" ]; then
+    if grep -A40 -E '^approvals:' config/config.example.yaml | grep -qE 'deny:'; then
+      ok "SEC-DENY: config.example 含 approvals.deny"
+    else
+      red "SEC-DENY: config.example 缺少 approvals.deny"
+    fi
+  fi
+}
+
+check_sec_docker() {
+  # --- SEC-DOCKER: 生产模板默认容器 ---
+  if [ -f "config/config.example.yaml" ]; then
+    if grep -A10 -E '^terminal:' config/config.example.yaml | grep -qE 'backend:\s*docker'; then
+      ok "SEC-DOCKER: config.example terminal.backend=docker"
+    else
+      red "SEC-DOCKER: config.example 未默认 docker"
+    fi
+  fi
+}
+
+check_sec_yolo() {
+  # --- SEC-YOLO ---
+  if [ -f "security/attestations/no-yolo-production.example.md" ]; then
+    ok "SEC-YOLO: no-yolo attestation 模板存在"
+  else
+    red "SEC-YOLO: 缺少 security/attestations/no-yolo-production.example.md"
+  fi
+  if grep -qE 'HERMES_YOLO_MODE' config/config.example.yaml config/secrets.env.example 2>/dev/null; then
+    ok "SEC-YOLO: 配置模板提及禁 YOLO"
+  else
+    red "SEC-YOLO: 配置模板未提及 HERMES_YOLO_MODE"
+  fi
+}
+
+check_sec_egress() {
+  # --- SEC-EGRESS ---
+  if [ -f "security/attestations/egress-allowlist.example.md" ]; then
+    ok "SEC-EGRESS: egress-allowlist attestation 模板存在"
+  else
+    red "SEC-EGRESS: 缺少 security/attestations/egress-allowlist.example.md"
+  fi
+  if grep -qiE 'egress' config/config.example.yaml AGENTS.md SECURITY.md 2>/dev/null; then
+    ok "SEC-EGRESS: 文档/配置提及 egress"
+  else
+    red "SEC-EGRESS: 未在文档或配置中提及 egress"
+  fi
 }
 
 check_sec_authz() {
@@ -208,7 +297,12 @@ echo "--- [5/5] SEC 安全门禁"
 check_sec_soul
 check_sec_bind
 check_sec_approvals
+check_sec_deny
+check_sec_docker
 check_sec_profile
+check_sec_observe
+check_sec_yolo
+check_sec_egress
 check_sec_skills
 check_sec_default
 check_sec_secrets

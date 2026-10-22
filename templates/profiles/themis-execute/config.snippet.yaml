@@ -1,12 +1,34 @@
 # themis-execute — 合并到 profile 的 config.yaml
-# executor：强制 approvals + preflight + 审计
+# 可写执行：强制 approvals + deny 硬否决 + 容器后端 + 审计
 
 soul: SOUL.md
-# SECURITY.md 须存在于 profile home
 
 approvals:
-  mode: smart   # 允许 manual；禁止 off
+  mode: smart                 # 允许 manual；禁止 off
   timeout: 300
+  cron_mode: deny
+  single_query_mode: deny
+  unattended_mode: deny
+  deny:
+    - "rm -rf *"
+    - "mkfs*"
+    - "dd if=*"
+    - "> /dev/sd*"
+    - "shutdown*"
+    - "reboot*"
+    - "poweroff*"
+    - "kubectl delete namespace *"
+    - "helm uninstall *"
+
+terminal:
+  backend: docker
+  docker_image: "nousresearch/hermes-sandbox:desktop"
+  docker_forward_env: []      # 仅显式添加任务所需变量
+
+agent:
+  disabled_toolsets:
+    - computer_use            # 生产执行面默认关闭桌面控制
+    - discord_admin
 
 memory:
   - memory/index.md
@@ -15,28 +37,10 @@ memory:
 inventory: inventory/hosts.yaml
 secrets: config/secrets.env
 
-persona: executor
-
-required_preflight: skills/safety/preflight-and-audit
-
-allow_skills:
-  - "**"
-
-requires_approval_for:
-  - DELETE
-  - DROP
-  - TRUNCATE
-  - ALTER TABLE
-  - rm -rf
-  - shutdown
-  - reboot
-  - poweroff
-  - migrate
-  - systemctl stop
-
 audit:
   sink: /var/log/hermes/audit.jsonl
   rotate: daily
   retain_days: 90
 
-backup_required: true
+# Themis 策略备注：执行前必须走 skills/safety/preflight-and-audit
+# 禁止生产环境：HERMES_YOLO_MODE=1、approvals.mode=off、GATEWAY_ALLOW_ALL_USERS=true

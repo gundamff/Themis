@@ -1,48 +1,85 @@
-﻿# Hermes Ops Agent — 配置示例
-# 复制本文件为 config.yaml，按你的环境填写
-# 敏感值（密码/密钥）一律写入 config/secrets.env，此处只引用变量名
+﻿# Hermes Ops Agent — 配置示例（Themis 安全硬化默认）
+# 复制为本机/profile 的 config.yaml 后按环境填写。
+# 敏感值写入 .env / secrets.env / Bitwarden / 1Password，禁止明文入库。
 
-# ── 核心法则（不可变，必须指向 SOUL.md）──────────────────────────────
+# ── 核心法则 ───────────────────────────────────────────────────────
 soul: SOUL.md
-# SECURITY.md 必须与 SOUL.md 一并存在于 HERMES_HOME / profile home
+# 权威安全全文：SECURITY.md（须与 SOUL 同目录；SOUL 内已含运行时短铁律）
 
-# ── 审批（生产环境禁止设为 off）────────────────────────────────────
+# ── 审批（生产禁止 off；禁止依赖 YOLO）────────────────────────────
 approvals:
-  mode: smart
+  mode: smart                 # smart | manual；禁止 off
   timeout: 300
   cron_mode: deny
+  single_query_mode: deny
   unattended_mode: deny
+  # 硬否决：即使 YOLO / mode:off 也不可执行（Hermes 原生）
+  deny:
+    - "rm -rf *"
+    - "mkfs*"
+    - "dd if=*"
+    - "> /dev/sd*"
+    - "shutdown*"
+    - "reboot*"
+    - "poweroff*"
+    - "kubectl delete *"
+    - "helm uninstall *"
 
-# ── 运行时加载的记忆文件 ────────────────────────────────────────────
+# ── 终端后端（生产默认容器隔离）──────────────────────────────────
+# local 仅用于可信开发机。网关/生产请用 docker（或 modal/daytona/vercel_sandbox）。
+# 注意：容器后端下 Hermes 可能跳过「危险命令审批」（容器即边界）；
+# 业务变更仍须走 Themis preflight + 人工审批，不可把「在容器里」当成免审。
+terminal:
+  backend: docker
+  docker_image: "nousresearch/hermes-sandbox:desktop"
+  docker_forward_env: []      # 默认不向容器注入密钥；按需显式添加
+  # env_passthrough: []
+
+# ── Agent 工具策略 ────────────────────────────────────────────────
+agent:
+  # 名称以官方 Toolsets Reference 为准：
+  # https://hermes-agent.nousresearch.com/docs/reference/toolsets-reference
+  disabled_toolsets: []       # 全局禁用列表；observe profile 见 templates/profiles
+
+# ── 运行时记忆（对齐 Hermes memories/ 时按安装文档映射）──────────
 memory:
-  - memory/index.md          # skills 索引，触发词 → 路径
-  - memory/user-profile.md   # 操作员偏好与授权范围
+  - memory/index.md
+  - memory/user-profile.md
 
-# ── 基础设施清单与凭据 ─────────────────────────────────────────────
-inventory: inventory/hosts.yaml    # 主机/服务清单（不含密码）
-secrets:   config/secrets.env      # 运行时凭据 provider；必须在 .gitignore 中
-# 生产环境可改用 Hermes .env、Bitwarden 或 1Password provider，禁止明文入库。
+# ── 清单与凭据 ────────────────────────────────────────────────────
+inventory: inventory/hosts.yaml
+secrets: config/secrets.env
 
-# ── 平台适配器（保持与你的 Hermes 网关版本一致）─────────────────────
+# ── 平台 / 网关暴露面 ─────────────────────────────────────────────
 platforms:
   api_server:
     enabled: true
-    host: "127.0.0.1"             # 禁止默认 0.0.0.0；公网暴露须例外流程
+    host: "127.0.0.1"         # 禁止默认 0.0.0.0
     port: 8642
     cors_origins:
-      - "http://localhost:3000"   # Open WebUI 地址
+      - "http://localhost:3000"
   webhook:
-    enabled: false                # 需要时改为 true，见 skills/integrate/webhook-subscriptions
-    host: "127.0.0.1"             # 默认仅本机；对外监听须完成暴露面例外流程
+    enabled: false
+    host: "127.0.0.1"
     port: 8644
-    secret: "${WEBHOOK_SECRET}"   # 从 secrets.env 注入
+    secret: "${WEBHOOK_SECRET}"
 
-# ── 审计 ────────────────────────────────────────────────────────────
+# 网关用户授权：生产必须配置 allowlist，禁止 GATEWAY_ALLOW_ALL_USERS=true
+# 在 profile 的 .env 中设置（示例）：
+#   GATEWAY_ALLOWED_USERS=your_id
+#   TELEGRAM_ALLOWED_USERS=...
+# 未配置 allowlist 且未 allow-all 时，Hermes 默认拒绝所有用户（fail-closed）。
+
+# ── Egress（致命三角之一）─────────────────────────────────────────
+# Agent 同时具备：私有数据 + 不可信内容 + 任意外联 = 高危。
+# 生产要求：浏览器/web 工具按需禁用（见 observe profile）；
+# 容器网络使用防火墙/egress allowlist；禁止生产 HERMES_YOLO_MODE=1。
+
+# ── 审计 ──────────────────────────────────────────────────────────
 audit:
-  sink: "/var/log/hermes/audit.jsonl"   # executor 的写操作强制落盘
+  sink: "/var/log/hermes/audit.jsonl"
   rotate: daily
   retain_days: 90
 
-# ── 逻辑角色与物理隔离 ─────────────────────────────────────────────
-# 逻辑角色及权限边界见 AGENTS.md；不要在本配置中声明伪 personas。
-# 生产读写隔离使用 templates/profiles/ 下的独立 Hermes profiles。
+# ── 逻辑角色 ──────────────────────────────────────────────────────
+# 见 AGENTS.md；物理隔离用 templates/profiles/themis-{observe,execute,approve}/

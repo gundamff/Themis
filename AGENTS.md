@@ -21,13 +21,21 @@
 
 ## 逻辑角色与 Hermes Profiles
 
-| 逻辑角色 | Hermes Profile | 硬约束 |
+| 逻辑角色 | Hermes Profile | 硬约束（Hermes 原生键，见 `templates/profiles/*/config.snippet.yaml`） |
 |----------|----------------|--------|
-| observer / diagnoser | `themis-observe` | 无写工具；无生产可写凭据 |
-| executor | `themis-execute` | 强制 Hermes approvals、`safety/preflight-and-audit` 与 security 门禁 |
+| observer / diagnoser | `themis-observe` | `agent.disabled_toolsets` 禁用写/外联类 toolset；`approvals.deny`；建议 `HERMES_WRITE_SAFE_ROOT`；无生产可写凭据 |
+| executor | `themis-execute` | `approvals.mode: smart`（禁 off）；`terminal.backend: docker`；`safety/preflight-and-audit`；禁 YOLO |
 | approver | `themis-approve` 或 Hermes approvals 通道 | 只签核；不执行 shell；不加载可写 inventory |
 
 使用 `hermes -p themis-observe` 进行只读观测或诊断，使用 `hermes -p themis-execute` 执行经审批的变更。
+
+### Profile 安装要点
+
+1. 合并对应 `config.snippet.yaml` 到 profile `config.yaml`（键名必须是 Hermes 认识的，不要自拟 `deny_tools`）。
+2. 将仓库根 `SOUL.md`、`SECURITY.md`、`AGENTS.md` 拷入 profile home（SOUL 含安全短铁律注入）。
+3. profile `.env`：配置 `GATEWAY_ALLOWED_USERS`（或平台 `*_ALLOWED_USERS`）；**不要**设 `HERMES_YOLO_MODE=1` / `GATEWAY_ALLOW_ALL_USERS=true`。
+4. observe 建议设置 `HERMES_WRITE_SAFE_ROOT` 指向空沙箱前缀。
+5. 生产出站：容器/主机 **egress allowlist** + 填写 `security/attestations/egress-allowlist.*.md`。
 
 ## 合规验证
 
@@ -41,12 +49,24 @@ bash scripts/verify.sh
 
 ## Hermes 原生安全
 
-Themis 叠加而非替代 Hermes 原生安全能力。审批、容器隔离、promptware 防护、凭据过滤和消息来源 allowlist 的配置以 [Hermes Security 官方文档](https://hermes-agent.nousresearch.com/docs/user-guide/security) 为准。
+Themis 叠加而非替代 Hermes 原生安全能力。须优先使用：
+
+| 能力 | 典型键 / 环境变量 |
+|------|-------------------|
+| 审批 + 硬否决 | `approvals.mode`、`approvals.deny` |
+| 工具集裁剪 | `agent.disabled_toolsets` |
+| 容器隔离 | `terminal.backend: docker`（容器≠业务变更免审） |
+| 写路径限制 | `HERMES_WRITE_SAFE_ROOT` |
+| 消息来源 | `GATEWAY_ALLOWED_USERS` / 平台 allowlist |
+| 禁 YOLO | 生产不得 `HERMES_YOLO_MODE=1` |
+
+细节以 [Hermes Security](https://hermes-agent.nousresearch.com/docs/user-guide/security) 与 Toolsets Reference 为准。
 
 ## 禁止事项
 
 - 禁止默认口令、共享口令或可复用明文密钥。
 - 禁止管理面无例外声明地绑定 `0.0.0.0` 或暴露到公网。
-- 禁止将 `approvals` 设为 `off`，或绕过 preflight 与审计。
+- 禁止将 `approvals` 设为 `off`、启用生产 YOLO，或绕过 preflight 与审计。
 - 禁止空认证、空 token、仅靠前端隐藏敏感接口。
 - 禁止只读 profile 持有生产写凭据，或单实例充当全网超级管理员。
+- 禁止生产 Agent 任意出站（缺 egress allowlist 且未禁用外联工具）。

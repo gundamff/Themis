@@ -23,6 +23,7 @@ bash scripts/install.sh
 
 The script automatically:
 - Copies configuration files from `.example` templates (won't overwrite existing files)
+- Copies `SECURITY.md`, profile templates, and attestation examples
 - Checks `.gitignore` (ensures `secrets.env` and `hosts.yaml` are not committed)
 - Creates the audit log directory
 - Runs `verify.sh` for basic checks
@@ -51,7 +52,20 @@ vi inventory/hosts.yaml
 vi memory/user-profile.md
 ```
 
-### Step 4: Write Your Concrete Skills
+### Step 4: Create Isolated Profiles
+
+```bash
+hermes profile create themis-observe
+hermes profile create themis-execute
+```
+
+Merge the configuration under `profiles-templates/themis-observe/` and `profiles-templates/themis-execute/` into the corresponding profiles. Production read-only and execution credentials must remain separate. The optional `themis-approve` profile is for approval only.
+
+### Step 5: Complete Security Attestations
+
+The installer copies `.example.md` files into the target `security/attestations/` directory. Complete the no-default-password, non-public-management-plane, critical-surface MFA, and secrets-provider declarations for the real environment. Example files are not evidence.
+
+### Step 6: Write Your Concrete Skills
 
 Themis provides a methodology framework. Concrete system skills need to be implemented by you. Create local skill files and declare `depends_on` to reference the methodology layer:
 
@@ -72,7 +86,7 @@ required_vars:
 # Write your MongoDB backup commands here
 ```
 
-### Step 5: Configure and Start Hermes
+### Step 7: Configure and Start Hermes
 
 ```bash
 hermes gateway setup   # First-time platform configuration
@@ -90,15 +104,23 @@ memory:
   - memory/user-profile.md
 ```
 
-### Step 6: Verify
+### Step 8: Verify
 
 ```bash
-# Check the gateway
+# Run the repository gate first; require EXIT 0 and FAIL: 0
+bash scripts/verify.sh
+
+# Then check the gateway
 curl http://localhost:8642/health
 
-# Test as observer (read-only, safest)
-hermes chat --persona observer "What is the current system status?"
+# Test with the read-only profile
+hermes -p themis-observe
+
+# Use only for approved changes
+hermes -p themis-execute
 ```
+
+See the [official Hermes Security documentation](https://hermes-agent.nousresearch.com/docs/user-guide/security) for native approvals, isolation, promptware protection, and credential controls.
 
 ---
 
@@ -108,7 +130,7 @@ Connect Hermes to Open WebUI as an OpenAI-compatible API:
 
 ```
 In config/config.yaml, set platforms.api_server:
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8642
   cors_origins:
     - "<Open WebUI address>"   # e.g. http://localhost:3000
@@ -116,6 +138,9 @@ In config/config.yaml, set platforms.api_server:
 Open WebUI connection settings:
   API URL: http://<Hermes host address>:8642/v1
   (When accessing the host from a Docker container, use host.docker.internal)
+
+For remote access, prefer an authenticated reverse proxy or tunnel.
+Do not bind 0.0.0.0 without a documented exception, IP allowlist, MFA, and TLS.
 
 Restart command:
   sudo hermes gateway restart --system

@@ -15,8 +15,16 @@
 | Trigger Words | Skill |
 |---------------|-------|
 | high-risk operation, delete, restart, preflight check, audit log, preflight, operation approval | `skills/safety/preflight-and-audit` |
+| threat modeling, asset classification, trust boundary, attack chain, threat model | `skills/security/threat-model` |
+| default password, secret rotation, credential leak, secrets provider, credential hygiene | `skills/security/credentials-hygiene` |
+| public exposure, port binding, management plane, 0.0.0.0, exposure | `skills/security/exposure-control` |
+| empty authentication, privilege escalation, API authorization, authorization baseline, authz | `skills/security/authz-baseline` |
+| configuration center, message middleware, scheduler, k8s, bastion, privileged plane | `skills/security/privileged-plane` |
+| security incident, credential revocation, compromise response, profile kill switch, incident response | `skills/security/incident-response` |
 
 ---
+
+> Hermes runtimes use `memories/`. During deployment, map or import this index as `memories/themis-index.md`; repository `memory/` remains the reviewable template source.
 
 ## Infrastructure
 

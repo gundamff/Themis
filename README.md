@@ -21,7 +21,7 @@
 
 Themis is an **operations agent framework** — not a ready-to-run agent. It provides:
 
-- **Governance layer**: The Three Laws (SOUL.md), four-persona model, preflight safety checks
+- **Governance layer**: Security Laws (`SECURITY.md`), Operations Laws (`SOUL.md`), logical roles, and preflight safety checks
 - **Methodology skills**: Abstract principles for backup, diagnosis, and observability
 - **Infrastructure skeleton**: Inventory/credential separation, audit logging
 - **Extension points**: You implement environment-specific skills on top of this framework
@@ -35,32 +35,34 @@ The framework is infrastructure-agnostic. Your environment's IPs, credentials, a
 ### Four-Layer Architecture
 
 ```
-SOUL.md (immutable Three Laws)
-  └─ memory/index.md + user-profile.md  (minimal pointers)
-       └─ inventory/hosts.yaml + config/secrets.env  (environment-specific, gitignored)
-            └─ skills/**  (methodology layer + your local concrete skills)
+SECURITY.md (immutable security laws)
+  └─ SOUL.md (immutable Operations Laws)
+       └─ AGENTS.md + Hermes Profiles (workflow and physical isolation)
+            └─ memory/index.md + inventory + skills/** (routing and methods)
 ```
 
 Skills reference only variable names (`${NODE_DB}`, `${SSH_DEFAULT_PASS}`). Switching environments means only changing `inventory/hosts.yaml` + `secrets.env`.
 
-### Four Personas
+### Logical Roles and Hermes Profiles
 
-A single Agent instance switches personas based on task type, with escalating permissions:
+The four roles remain a logical authorization model. Production instances are physically separated with Hermes Profiles:
 
-| Persona | Role | Write Operations | Typical Tasks |
-|---------|------|------------------|---------------|
-| `observer` | Read-only patrol | None | Scheduled health reports, alert monitoring |
-| `diagnoser` | Read-only diagnosis | None (read-only SSH) | Root cause analysis, data quality checks |
-| `executor` | Controlled execution | Yes (requires preflight + approval) | Backups, config changes, remediation |
-| `approver` | Approval authority | None | Sign off on approve/reject for high-risk operations |
+| Logical Role | Profile | Constraint |
+|--------------|---------|------------|
+| `observer` / `diagnoser` | `themis-observe` | No write tools or writable production credentials |
+| `executor` | `themis-execute` | Approvals, preflight, and security gates are mandatory |
+| `approver` | `themis-approve` or Hermes approvals | Approves only; no shell or writable inventory |
 
-Switch personas: `hermes chat --persona diagnoser`
+```bash
+hermes -p themis-observe
+hermes -p themis-execute
+```
 
 ---
 
 ## The Three Laws
 
-The `SOUL.md` file contains the immutable core of the Agent:
+`SECURITY.md` is loaded before `SOUL.md`; both are immutable. `SOUL.md` contains the operations core:
 
 - **First Law**: System stability is paramount (above all else)
 - **Second Law**: Obey human commands (First Law takes precedence in conflicts)
@@ -75,14 +77,26 @@ The execution flow (preflight checks, audit logging) is implemented in `skills/s
 
 ---
 
+## Security and Compliance Gates
+
+- Read `SECURITY.md` and `AGENTS.md` before deploying.
+- Create isolated profiles from `templates/profiles/`.
+- Complete the declarations under `security/attestations/`; examples are not evidence.
+- Run `bash scripts/verify.sh` and require exit code `0` with `FAIL: 0`.
+- Follow the [official Hermes Security documentation](https://hermes-agent.nousresearch.com/docs/user-guide/security) for native approvals, isolation, promptware protection, and credential controls.
+
+---
+
 ## Project Structure
 
 ```
 Themis/
+├── SECURITY.md                     # Immutable security laws
 ├── SOUL.md                         # The Three Laws (immutable)
+├── AGENTS.md                       # Loading order, profiles, and gates
 ├── MIGRATION.md                    # Guide: migrate from an existing Hermes setup
 ├── config/
-│   ├── config.example.yaml         # 4-persona config template → copy to config.yaml
+│   ├── config.example.yaml         # Safe defaults; logical roles are mapped in AGENTS.md
 │   └── secrets.env.example         # Credentials template → copy to secrets.env (gitignored)
 ├── memory/
 │   ├── index.md                    # Skills index (trigger words → paths)
@@ -90,6 +104,7 @@ Themis/
 ├── inventory/
 │   └── hosts.example.yaml          # Host inventory template (variable naming conventions)
 ├── skills/
+│   ├── security/                   # Security methodology and hard gates
 │   ├── safety/                     # Safety: Preflight checks + audit (Three Laws enforcement)
 │   ├── infra/                      # Infrastructure: Inventory loading + credential rules
 │   ├── observe/                    # Observability methodology (abstract principles)
@@ -149,7 +164,7 @@ Fetch the migration guide and follow it:
 curl -s https://raw.githubusercontent.com/gundamff/Themis/main/MIGRATION.md
 ```
 
-The migration guide covers 4 phases: skeleton files → skill migration → memory cleanup → validation.
+The migration guide covers 5 phases: skeleton files → skill migration → memory mapping → profile migration → validation.
 It handles credential externalization, IP variable substitution, and frontmatter compliance.
 Complete the guide before running `bash scripts/verify.sh`.
 
@@ -200,6 +215,7 @@ required_vars:
 ```bash
 hermes gateway setup
 hermes gateway run
+hermes -p themis-observe
 ```
 
 ---

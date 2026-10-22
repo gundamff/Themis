@@ -12,8 +12,9 @@
 | --------- | ------------------------------------------------- | ------------------------------ |
 | Phase 1   | Create skeleton files (SOUL/config/inventory/secrets) | Do first; foundation for all subsequent steps |
 | Phase 2   | Migrate Skills                                    | Process file by file           |
-| Phase 3   | Memory Cleanup                                    | Clean up old README.md last    |
-| Phase 4   | Verification                                      | After everything is done       |
+| Phase 3   | Clean up memory and map it to Hermes memories     | Clean up old README.md last    |
+| Phase 4   | Migrate personas to Hermes Profiles               | Complete before verification   |
+| Phase 5   | Verification                                      | After everything is done       |
 
 
 ---
@@ -191,18 +192,53 @@ cp Themis/memory/index.md ~/.hermes/memory/index.md
 # If you have local custom skills, append trigger word mappings in index.md
 ```
 
+### 3.4 Map Themis memory to Hermes memories
+
+`memory/` is the reviewable template and index directory in the Themis repository. Current Hermes runtimes use `memories/`. Preserve the source semantics and map the files into the Hermes runtime directory:
+
+```bash
+mkdir -p ~/.hermes/memories
+cp ~/.hermes/memory/index.md ~/.hermes/memories/themis-index.md
+cp ~/.hermes/memory/user-profile.md ~/.hermes/memories/user-profile.md
+```
+
+If your Hermes version provides a memories import command, prefer the official command so that two writable copies are not maintained.
+
 ---
 
-## Phase 4: Verification
+## Phase 4: Migrate Personas to Hermes Profiles
 
-### 4.1 Compliance Check (Recommended to Run First)
+The `personas:` block in old configurations and `hermes chat --persona diagnoser` are deprecated. Logical roles remain, but runtime isolation is now provided by Profiles:
+
+| Old Logical Role | New Profile |
+|------------------|-------------|
+| observer / diagnoser | `themis-observe` |
+| executor | `themis-execute` |
+| approver | `themis-approve` or Hermes approvals |
+
+```bash
+hermes profile create themis-observe
+hermes profile create themis-execute
+
+# Merge the matching Themis/templates/profiles/ template, then start the profile
+hermes -p themis-observe
+hermes -p themis-execute
+```
+
+Before deleting the old `personas:` configuration, verify that the read-only profile has no write tools or production write credentials, the execute profile does not disable approvals, and the old configuration is backed up for rollback.
+
+---
+
+## Phase 5: Verification
+
+### 5.1 Compliance Check (Recommended to Run First)
 
 ```bash
 bash scripts/verify.sh
 # All OK, no FAIL items
 ```
 
-### 4.2 Three Laws Duplication Check
+### 5.2 Three Laws Duplication Check
 
 ```bash
 # skills/ should not contain Three Laws text (only SOUL.en.md is the authoritative source)
@@ -210,7 +246,7 @@ grep -rln "First Law\|Second Law\|Third Law" skills/
 # Expected: no output
 ```
 
-### 4.3 Plaintext Credentials Check
+### 5.3 Plaintext Credentials Check
 
 ```bash
 # skills/ and memory/ should not contain real passwords or real IPs
@@ -219,7 +255,7 @@ grep -rn '<YOUR_OLD_PASSWORD>\|<YOUR_OLD_IP>' skills/ memory/ \
   && echo "FAIL: still has plaintext credentials" || echo "OK"
 ```
 
-### 4.4 Skill Frontmatter Check
+### 5.4 Skill Frontmatter Check
 
 ```bash
 for f in $(find skills/ -name "SKILL.md"); do
@@ -237,7 +273,7 @@ done
 ~/.hermes/
 ├── SOUL.md                          # Copied from Themis, immutable
 ├── config/
-│   ├── config.yaml                  # Contains soul/inventory/secrets/4-persona configuration
+│   ├── config.yaml                  # Contains soul/inventory/secrets and safe defaults
 │   └── secrets.env                  # [gitignored] Your real credentials
 ├── memory/
 │   ├── index.md                     # Skills trigger word index

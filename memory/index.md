@@ -15,8 +15,16 @@
 | 触发词 | Skill |
 |--------|-------|
 | 高危操作、删除、重启、执行前检查、审计日志、preflight、操作审批 | `skills/safety/preflight-and-audit` |
+| 威胁建模、资产分级、信任边界、攻击链、threat model | `skills/security/threat-model` |
+| 默认口令、密钥轮换、凭据泄漏、secrets provider、credential hygiene | `skills/security/credentials-hygiene` |
+| 公网暴露、端口绑定、管理面、0.0.0.0、exposure | `skills/security/exposure-control` |
+| 空认证、越权、接口鉴权、授权基线、authz | `skills/security/authz-baseline` |
+| 配置中心、消息中间件、调度平台、k8s、堡垒机、privileged plane | `skills/security/privileged-plane` |
+| 安全事件、凭据吊销、失陷响应、profile 熔断、incident response | `skills/security/incident-response` |
 
 ---
+
+> Hermes 运行时使用 `memories/`。部署时将本索引映射或导入为 `memories/themis-index.md`；仓库中的 `memory/` 保留为可审查模板源。
 
 ## 基础设施
 

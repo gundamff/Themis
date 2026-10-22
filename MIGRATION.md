@@ -12,8 +12,9 @@
 | ------- | ------------------------------------- | --------------- |
 | Phase 1 | 新建骨架文件（SOUL/config/inventory/secrets） | 先做，是后续操作的基础     |
 | Phase 2 | skills 迁移与变量化                         | 逐文件处理           |
-| Phase 3 | memory 精简                             | 最后清理旧 README.md |
-| Phase 4 | 验证                                    | 全部完成后           |
+| Phase 3 | memory 精简并映射到 Hermes memories         | 最后清理旧 README.md |
+| Phase 4 | persona 迁移为 Hermes Profiles             | 验证前完成           |
+| Phase 5 | 验证                                    | 全部完成后           |
 
 
 ---
@@ -191,18 +192,53 @@ cp Themis/memory/index.md ~/.hermes/memory/index.md
 # 如有本地自定义 skill，在 index.md 中追加触发词映射
 ```
 
+### 3.4 将 Themis memory 映射到 Hermes memories
+
+`memory/` 是 Themis 仓库中的可审查模板与索引目录；Hermes 当前运行时使用 `memories/`。部署时保留源文件语义并映射到 Hermes 运行目录：
+
+```bash
+mkdir -p ~/.hermes/memories
+cp ~/.hermes/memory/index.md ~/.hermes/memories/themis-index.md
+cp ~/.hermes/memory/user-profile.md ~/.hermes/memories/user-profile.md
+```
+
+如果你的 Hermes 版本提供 memories 导入命令，优先使用官方命令，避免同时维护两份可写副本。
+
 ---
 
-## Phase 4：验证
+## Phase 4：从 persona 迁移到 Hermes Profiles
 
-### 4.1 合规检查（推荐先运行）
+旧配置中的 `personas:` 块以及 `hermes chat --persona diagnoser` 已弃用。逻辑角色仍保留，但运行时隔离统一由 Profiles 提供：
+
+| 旧逻辑角色 | 新 Profile |
+|------------|------------|
+| observer / diagnoser | `themis-observe` |
+| executor | `themis-execute` |
+| approver | `themis-approve` 或 Hermes approvals |
+
+```bash
+hermes profile create themis-observe
+hermes profile create themis-execute
+
+# 将 Themis/templates/profiles/ 对应模板合并到新 profile 后启动
+hermes -p themis-observe
+hermes -p themis-execute
+```
+
+删除旧 `personas:` 配置前，确认只读 profile 没有写工具或生产写凭据，execute profile 的 approvals 未关闭，并保留原配置备份以便回滚。
+
+---
+
+## Phase 5：验证
+
+### 5.1 合规检查（推荐先运行）
 
 ```bash
 bash scripts/verify.sh
 # 全部 OK，无 FAIL 项
 ```
 
-### 4.2 三定律重复检查
+### 5.2 三定律重复检查
 
 ```bash
 # skills/ 中不应有三定律条文（只有 SOUL.md 是权威来源）
@@ -210,7 +246,7 @@ grep -rln "第一定律\|第二定律\|第三定律" skills/
 # 期望：无输出
 ```
 
-### 4.3 明文凭据检查
+### 5.3 明文凭据检查
 
 ```bash
 # skills/ 和 memory/ 中不应有真实密码或真实 IP
@@ -219,7 +255,7 @@ grep -rn '<你的旧密码>\|<你的旧IP>' skills/ memory/ \
   && echo "FAIL: 仍有明文凭据" || echo "OK"
 ```
 
-### 4.4 Skill frontmatter 检查
+### 5.4 Skill frontmatter 检查
 
 ```bash
 for f in $(find skills/ -name "SKILL.md"); do
@@ -237,7 +273,7 @@ done
 ~/.hermes/
 ├── SOUL.md                          # 从 Themis 复制，不可修改
 ├── config/
-│   ├── config.yaml                  # 含 soul/inventory/secrets/4-persona 配置
+│   ├── config.yaml                  # 含 soul/inventory/secrets 与安全默认值
 │   └── secrets.env                  # [gitignored] 你的真实凭据
 ├── memory/
 │   ├── index.md                     # skills 触发词索引

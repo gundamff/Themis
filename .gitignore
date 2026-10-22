@@ -1,0 +1,9 @@
+# Local PDF extraction / OCR artifacts (never commit)
+_pdf_extract/
+
+# Environment secrets
+config/secrets.env
+inventory/hosts.yaml
+*.env
+!*.env.example
+!**/*.env.example

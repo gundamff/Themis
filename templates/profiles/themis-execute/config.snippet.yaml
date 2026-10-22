@@ -1,0 +1,42 @@
+# themis-execute — 合并到 profile 的 config.yaml
+# executor：强制 approvals + preflight + 审计
+
+soul: SOUL.md
+# SECURITY.md 须存在于 profile home
+
+approvals:
+  mode: smart   # 允许 manual；禁止 off
+  timeout: 300
+
+memory:
+  - memory/index.md
+  - memory/user-profile.md
+
+inventory: inventory/hosts.yaml
+secrets: config/secrets.env
+
+persona: executor
+
+required_preflight: skills/safety/preflight-and-audit
+
+allow_skills:
+  - "**"
+
+requires_approval_for:
+  - DELETE
+  - DROP
+  - TRUNCATE
+  - ALTER TABLE
+  - rm -rf
+  - shutdown
+  - reboot
+  - poweroff
+  - migrate
+  - systemctl stop
+
+audit:
+  sink: /var/log/hermes/audit.jsonl
+  rotate: daily
+  retain_days: 90
+
+backup_required: true

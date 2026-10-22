@@ -1,0 +1,39 @@
+# themis-approve — 合并到 profile 的 config.yaml
+# 仅签核，不执行变更
+
+soul: SOUL.md
+# SECURITY.md 须存在于 profile home
+
+memory:
+  - memory/index.md
+
+persona: approver
+
+allow_skills:
+  - safety/preflight-and-audit
+
+deny_tools:
+  - shell_exec
+  - file_write
+  - file_edit
+  - ssh
+  - apply_patch
+
+# 不加载可写 inventory / secrets
+inventory: null
+secrets: null
+
+approvals:
+  mode: manual
+  timeout: 600
+
+output_schema:
+  decision: approve | reject
+  reason: string
+  trace_id: string
+  signature: sha256(decision+reason+trace_id+timestamp)
+
+audit:
+  sink: /var/log/hermes/approvals.jsonl
+  rotate: daily
+  retain_days: 365

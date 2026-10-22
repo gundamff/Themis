@@ -1,0 +1,36 @@
+# themis-observe — 合并到 profile 的 config.yaml
+# 只读：禁止写工具与 shell 写路径；approvals 可省略，但不得 mode: off
+
+soul: SOUL.md
+# SECURITY.md 须存在于 profile home（Hermes security / override:forbidden）
+
+memory:
+  - memory/index.md
+  - memory/user-profile.md
+
+inventory: inventory/hosts.yaml
+# 只读 profile：secrets 使用只读占位或省略可写凭据文件
+secrets: config/secrets.env.readonly.example
+
+persona: observer
+
+allow_skills:
+  - observe/**
+  - diagnose/**
+  - infra/inventory-loader
+  - security/threat-model
+  - security/exposure-control
+  - security/authz-baseline
+
+# 写工具一律拒绝（读写隔离 / SEC-PROFILE）
+deny_tools:
+  - shell_exec
+  - file_write
+  - file_edit
+  - ssh_write
+  - apply_patch
+
+allow_shell_patterns: []
+
+audit:
+  sink: null

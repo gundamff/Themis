@@ -264,12 +264,32 @@ check_sec_skills() {
     skills/security/exposure-control/SKILL.md \
     skills/security/incident-response/SKILL.md \
     skills/security/mcp-supply-chain/SKILL.md \
-    skills/security/output-and-audit-guards/SKILL.md
+    skills/security/output-and-audit-guards/SKILL.md \
+    skills/security/multi-agent-trust/SKILL.md
   do
     if [ -f "$skill" ]; then ok "SEC-SKILL: $skill"; else red "SEC-SKILL: 缺少 $skill"; fi
   done
   check_sec_authz
   check_sec_privplane
+}
+
+check_sec_ext() {
+  # --- SEC-EXT (P2): 外挂证据模板 + 附录 + 多 Agent 专章 ---
+  for f in \
+    security/attestations/gshark-scan.example.md \
+    security/attestations/murphysec-sca.example.md \
+    security/attestations/runtime-ids-overlay.example.md \
+    security/attestations/container-hardening-overlay.example.md \
+    docs/security/external-overlays.md \
+    skills/security/multi-agent-trust/SKILL.md
+  do
+    if [ -f "$f" ]; then ok "SEC-EXT: $f"; else red "SEC-EXT: 缺少 $f"; fi
+  done
+  if grep -qF "多 Agent" AGENTS.md 2>/dev/null || grep -qF "multi-agent-trust" AGENTS.md 2>/dev/null; then
+    ok "SEC-EXT: AGENTS 提及多 Agent / 外部叠层"
+  else
+    red "SEC-EXT: AGENTS.md 未提及多 Agent 或外部叠层"
+  fi
 }
 
 check_sec_default() {
@@ -401,6 +421,7 @@ check_sec_skills
 check_sec_default
 check_sec_secrets
 check_sec_adv
+check_sec_ext
 
 # ── 结果汇总 ──────────────────────────────────────────────────────
 echo ""

@@ -72,6 +72,11 @@ Themis 叠加而非替代 Hermes 原生安全能力。须优先使用：
 - 回复与 tool 结果不得回显可复用密钥；审计最低字段见 `skills/security/output-and-audit-guards`。
 - 对抗静态用例：`tests/adversarial/cases.md`；`bash scripts/verify-adversarial.sh`。
 
+## 外部叠层与多 Agent（P2）
+
+- 生产应外挂敏感信息扫描（GShark 等）、SCA（murphysec 等）、主机检测（Elkeid 等）、容器加固（vArmor 等），并填写对应 attestation；说明见 `docs/security/external-overlays.md`。
+- 多 profile / peer：**不得**隐式共享写凭据或合并工具集；跨 Agent 写操作须独立审批票据。细则见 `skills/security/multi-agent-trust`。
+
 ## 禁止事项
 
 - 禁止默认口令、共享口令或可复用明文密钥。
@@ -82,3 +87,4 @@ Themis 叠加而非替代 Hermes 原生安全能力。须优先使用：
 - 禁止生产 Agent 任意出站（缺 egress allowlist 且未禁用外联工具）。
 - 禁止无票据或票据与 `argv_digest` 不符时执行高危变更。
 - 禁止生产沙箱 `privileged` 或挂载 `docker.sock`（无书面例外）。
+- 禁止跨 Agent/peer 隐式共享生产写凭据或沿调用链提升权限。

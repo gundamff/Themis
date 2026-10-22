@@ -1,6 +1,6 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # scripts/verify.sh — 合规检查脚本
-# 检查三项规则：1) skills 不含明文密码  2) SOUL.md 完整性  3) 新 skill 声明了 persona/triggers
+# 五组检查 [1/5]…[5/5]：skills 密码 / SOUL / 方法论 / frontmatter / SEC 安全门禁
 # 用法: bash scripts/verify.sh
 # CI 集成: 返回非 0 表示检查失败，阻止 PR 合并
 
@@ -125,8 +125,9 @@ check_sec_soul() {
 check_sec_bind() {
   # --- SEC-BIND ---
   if [ -f "config/config.example.yaml" ]; then
-    if grep -nE 'host:\s*"?0\.0\.0\.0"?' config/config.example.yaml | grep -vE '#.*(EXCEPTION|例外)'; then
-      # 若命中且同行/上一行无例外标记 → FAIL
+    UNMARKED_BIND=$(grep -nE 'host:\s*"?0\.0\.0\.0"?' config/config.example.yaml \
+      | grep -vE '#.*(EXCEPTION|例外)' || true)
+    if [ -n "$UNMARKED_BIND" ]; then
       red "SEC-BIND: config.example 默认暴露 0.0.0.0（须改为 127.0.0.1 或标注例外）"
     else
       ok "SEC-BIND: 无未标注的 0.0.0.0 绑定"

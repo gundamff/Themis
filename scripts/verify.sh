@@ -19,7 +19,7 @@ echo "=== Themis 合规检查 ==="
 echo ""
 
 # ── CHECK 1: skills/ 不含明文密码特征 ──────────────────────────────
-echo "--- [1/4] 检查 skills/ 中是否存在明文密码特征"
+echo "--- [1/5] 检查 skills/ 中是否存在明文密码特征"
 
 # 检测看起来像密码的模式（含特殊字符的短字符串，排除注释行和变量引用）
 BAD_PATTERNS=(
@@ -45,7 +45,7 @@ fi
 
 # ── CHECK 2: SOUL.md 完整性 ────────────────────────────────────────
 echo ""
-echo "--- [2/4] 检查 SOUL.md 完整性"
+echo "--- [2/5] 检查 SOUL.md 完整性"
 
 SOUL="SOUL.md"
 if [ ! -f "$SOUL" ]; then
@@ -64,7 +64,7 @@ fi
 
 # ── CHECK 3: 三个方法论 SKILL.md 存在 ─────────────────────────────
 echo ""
-echo "--- [3/4] 检查方法论 SKILL.md 是否存在"
+echo "--- [3/5] 检查方法论 SKILL.md 是否存在"
 
 for methodology in "skills/observe/SKILL.md" "skills/diagnose/SKILL.md" "skills/backup/SKILL.md"; do
   if [ -f "$methodology" ]; then
@@ -76,7 +76,7 @@ done
 
 # ── CHECK 4: 每个 SKILL.md 声明了 persona 和 triggers ─────────────
 echo ""
-echo "--- [4/4] 检查每个 SKILL.md 的 frontmatter 完整性"
+echo "--- [4/5] 检查每个 SKILL.md 的 frontmatter 完整性"
 
 while IFS= read -r -d '' skill_file; do
   skill_name=$(dirname "$skill_file" | xargs basename)
@@ -104,6 +104,113 @@ while IFS= read -r -d '' skill_file; do
     ok "$skill_file frontmatter 完整"
   fi
 done < <(find skills/ -name "SKILL.md" -print0 2>/dev/null)
+
+# ── CHECK 5: SEC 安全门禁 ─────────────────────────────────────────
+check_sec_soul() {
+  # --- SEC-SOUL ---
+  if [ ! -f "SECURITY.md" ]; then
+    red "SEC-SOUL: SECURITY.md 不存在"
+  else
+    for required in "immutable: true" "override: forbidden" "load: always" \
+      "身份最小权限" "密钥不落明文" "禁止空认证" "管理面零公网" "读写隔离" "不可静默关闭防护"; do
+      if grep -qF "$required" "SECURITY.md"; then
+        ok "SEC-SOUL: 含 $required"
+      else
+        red "SEC-SOUL: 缺少 $required"
+      fi
+    done
+  fi
+}
+
+check_sec_bind() {
+  # --- SEC-BIND ---
+  if [ -f "config/config.example.yaml" ]; then
+    if grep -nE 'host:\s*"?0\.0\.0\.0"?' config/config.example.yaml | grep -vE '#.*(EXCEPTION|例外)'; then
+      # 若命中且同行/上一行无例外标记 → FAIL
+      red "SEC-BIND: config.example 默认暴露 0.0.0.0（须改为 127.0.0.1 或标注例外）"
+    else
+      ok "SEC-BIND: 无未标注的 0.0.0.0 绑定"
+    fi
+  fi
+}
+
+check_sec_approvals() {
+  # --- SEC-APPROVALS ---
+  if [ -f "config/config.example.yaml" ]; then
+    if grep -qE 'approvals:[[:space:]]*$|approvals:' config/config.example.yaml; then
+      if grep -A5 -E '^approvals:' config/config.example.yaml | grep -qE 'mode:\s*off'; then
+        red "SEC-APPROVALS: 生产模板不得 approvals.mode: off"
+      else
+        ok "SEC-APPROVALS: approvals 未设为 off"
+      fi
+    else
+      red "SEC-APPROVALS: config.example 缺少 approvals 配置块"
+    fi
+  fi
+}
+
+check_sec_profile() {
+  # --- SEC-PROFILE ---
+  for d in templates/profiles/themis-observe templates/profiles/themis-execute; do
+    if [ -d "$d" ]; then ok "SEC-PROFILE: $d 存在"; else red "SEC-PROFILE: 缺少 $d"; fi
+  done
+}
+
+check_sec_authz() {
+  local skill="skills/security/authz-baseline/SKILL.md"
+  if [ -f "$skill" ]; then ok "SEC-SKILL: $skill"; else red "SEC-SKILL: 缺少 $skill"; fi
+}
+
+check_sec_privplane() {
+  local skill="skills/security/privileged-plane/SKILL.md"
+  if [ -f "$skill" ]; then ok "SEC-SKILL: $skill"; else red "SEC-SKILL: 缺少 $skill"; fi
+}
+
+check_sec_skills() {
+  # --- SEC-AUTHZ / SEC-PRIVPLANE / 其余 security skills ---
+  for skill in \
+    skills/security/threat-model/SKILL.md \
+    skills/security/credentials-hygiene/SKILL.md \
+    skills/security/exposure-control/SKILL.md \
+    skills/security/incident-response/SKILL.md
+  do
+    if [ -f "$skill" ]; then ok "SEC-SKILL: $skill"; else red "SEC-SKILL: 缺少 $skill"; fi
+  done
+  check_sec_authz
+  check_sec_privplane
+}
+
+check_sec_default() {
+  # --- SEC-DEFAULT: 禁止示例中的典型默认口令字面量 ---
+  DEFAULT_HITS=$(grep -rnE --include='*.md' --include='*.yaml' --include='*.yml' --include='*.env*' \
+    -E 'apollo/admin|password:\s*admin\b|password:\s*public\b|NACOS_AUTH_TOKEN|admin/public' \
+    config/ inventory/ templates/ skills/security/ 2>/dev/null | grep -v '禁止\|示例错误\|BAD EXAMPLE\|# BAD' || true)
+  if [ -n "$DEFAULT_HITS" ]; then
+    red "SEC-DEFAULT: 发现疑似默认口令字面量"
+    echo "$DEFAULT_HITS" | head -20
+  else
+    ok "SEC-DEFAULT: 未发现默认口令字面量"
+  fi
+}
+
+check_sec_secrets() {
+  # --- SEC-SECRETS: attestation 模板存在 ---
+  if [ -f "security/attestations/secrets-provider.example.md" ]; then
+    ok "SEC-SECRETS: secrets-provider attestation 模板存在"
+  else
+    red "SEC-SECRETS: 缺少 security/attestations/secrets-provider.example.md"
+  fi
+}
+
+echo ""
+echo "--- [5/5] SEC 安全门禁"
+check_sec_soul
+check_sec_bind
+check_sec_approvals
+check_sec_profile
+check_sec_skills
+check_sec_default
+check_sec_secrets
 
 # ── 结果汇总 ──────────────────────────────────────────────────────
 echo ""

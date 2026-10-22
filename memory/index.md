@@ -19,8 +19,11 @@
 | 默认口令、密钥轮换、凭据泄漏、secrets provider、credential hygiene | `skills/security/credentials-hygiene` |
 | 公网暴露、端口绑定、管理面、0.0.0.0、exposure | `skills/security/exposure-control` |
 | 空认证、越权、接口鉴权、授权基线、authz | `skills/security/authz-baseline` |
-| 配置中心、消息中间件、调度平台、k8s、堡垒机、privileged plane | `skills/security/privileged-plane` |
+| 配置中心、消息中间件、调度平台、k8s、堡垒机、privileged plane、沙箱、docker.sock、privileged | `skills/security/privileged-plane` |
 | 安全事件、凭据吊销、失陷响应、profile 熔断、incident response | `skills/security/incident-response` |
+| MCP、模型上下文协议、工具服务器、供应链、钉版本 | `skills/security/mcp-supply-chain` |
+| 输出脱敏、工具审计、密钥回显、外泄检测 | `skills/security/output-and-audit-guards` |
+| 多 Agent、peer、委托、信任边界、级联权限 | `skills/security/multi-agent-trust` |
 
 ---
 

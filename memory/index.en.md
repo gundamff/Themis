@@ -19,8 +19,11 @@
 | default password, secret rotation, credential leak, secrets provider, credential hygiene | `skills/security/credentials-hygiene` |
 | public exposure, port binding, management plane, 0.0.0.0, exposure | `skills/security/exposure-control` |
 | empty authentication, privilege escalation, API authorization, authorization baseline, authz | `skills/security/authz-baseline` |
-| configuration center, message middleware, scheduler, k8s, bastion, privileged plane | `skills/security/privileged-plane` |
+| configuration center, message middleware, scheduler, k8s, bastion, privileged plane, sandbox, docker.sock, privileged | `skills/security/privileged-plane` |
 | security incident, credential revocation, compromise response, profile kill switch, incident response | `skills/security/incident-response` |
+| MCP, model context protocol, tool server, supply chain, pin version | `skills/security/mcp-supply-chain` |
+| output redaction, tool audit, secret echo, exfiltration | `skills/security/output-and-audit-guards` |
+| multi-agent, peer, delegation, trust boundary, privilege chain | `skills/security/multi-agent-trust` |
 
 ---
 

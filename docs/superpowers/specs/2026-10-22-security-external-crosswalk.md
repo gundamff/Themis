@@ -39,7 +39,7 @@
 | OA-1.1 | 最小工具集 / per-tool 权限 | `templates/profiles/themis-observe|execute`；`SECURITY.md` §5 | **P** | 意向字段 `deny_tools` **未证明**被 Hermes 执行 |
 | OA-1.2 | 不同信任级分离工具集 | observe / execute / approve profiles | **P** | 物理 profile 分离有；工具 allowlist 运行时未钉死 |
 | OA-1.3 | 敏感操作显式授权 | `approvals.mode: smart`；`safety/preflight`；SEC-APPROVALS | **Y/P** | 有审批门禁；缺「执行组件独立于 Agent 再校验」 |
-| OA-1.4 | 审批绑定 actor+工具+参数+一次性消费 | preflight 报告含 trace_id | **N** | 无参数绑定/一次性/过期 artifact |
+| OA-1.4 | 审批绑定 actor+工具+参数+一次性消费 | approval-ticket schema + preflight `argv_digest`/`expires_at` | **P** | 规程级票据有；缺 Hermes 强制中间件 |
 | OA-1.5 | 未知工具 fail-closed | — | **N** | 未写 |
 | OA-2.1 | 外部数据一律不可信 | AGENTS/Hermes promptware；禁关扫描 | **P** | 依赖 Hermes；缺 Themis 操作规程专节 |
 | OA-2.2 | 指令与数据分界 / 过滤 | 依赖 Hermes context scan | **P** | |
@@ -51,18 +51,18 @@
 | OA-4.3 | 可中断/回滚 | SOUL 备份要求；backup skill | **P** | 偏运维回滚，非 Agent 会话中断协议 |
 | OA-4.4 | 决策与执行分离 + step-up auth | approver persona；MFA attestation | **P** | MFA 仅声明；无 step-up 运行时 |
 | OA-5.1 | 输出结构化校验 / 禁敏感参数 | — | **N** | |
-| OA-5.2 | 输出 PII/密钥过滤 | verify 扫 skills 明文；缺运行时 | **P** | |
-| OA-5.3 | 外泄模式检测（URL/webhook 大包） | — | **N** | |
+| OA-5.2 | 输出 PII/密钥过滤 | `output-and-audit-guards` + verify 明文扫；缺运行时过滤器 | **P** | |
+| OA-5.3 | 外泄模式检测（URL/webhook 大包） | output-and-audit-guards 告警意向 | **P** | 规程有；无运行时检测器 |
 | OA-5.4 | 速率限制 / DoW | — | **N** | |
 | OA-6.1 | 记录工具调用与结果 | audit.jsonl 设计（safety） | **P** | 模板有；未强制 Hermes 全量 tool log |
 | OA-6.2 | 异常：审批绕过、高危频率 | — | **N** | |
 | OA-6.3 | 日志脱敏 | credentials skill 禁止明文 | **P** | 无日志管道规范 |
-| OA-7.1 | 多 Agent 信任边界 | — | **N** | Hermes peer 未覆盖 |
-| OA-7.2 | 链上权限不升级 / 熔断 | incident-response 有熔断意向 | **P** | |
+| OA-7.1 | 多 Agent 信任边界 | `multi-agent-trust` skill + AGENTS | **P** | 专章有；Hermes peer 运行时未测 |
+| OA-7.2 | 链上权限不升级 / 熔断 | multi-agent-trust + incident-response | **P** | |
 | OA-8.1 | 数据分级与上下文最小化 | — | **N** | |
 | OA-8.2 | 静态密钥不进上下文 | SECURITY §2；credentials-hygiene | **Y** | |
-| OA-9.1 | 滥用用例矩阵（注入/工具/提权/投毒/外泄/审批绕过） | 仅 SECURITY 缺失 / approvals off 负例 | **P** | 远未达 OWASP 矩阵 |
-| OA-9.2 | CI 对抗回归门禁 | `verify.sh` 静态 SEC-* | **P** | 静态≠对抗 |
+| OA-9.1 | 滥用用例矩阵（注入/工具/提权/投毒/外泄/审批绕过） | `tests/adversarial/cases.md` ADV-01…08 | **P** | 静态/规程矩阵；非 live 红队 |
+| OA-9.2 | CI 对抗回归门禁 | `verify-adversarial.sh` + SEC-ADV | **P** | 静态对抗已进 CI；≠ live LLM |
 
 **Cheat Sheet 小结：** HITL、密钥、读写隔离政策 **相对齐**；工具中间件强制、输出护栏、memory、多 Agent、对抗矩阵 **明显不足**。
 
@@ -80,13 +80,13 @@
 | DS-P1 | 默认拒绝 + 显式 allow | observe deny 意向；execute 宽 | **P** |
 | DS-P2 | 权限配置进版本库可审 | config.example + templates 进库 | **Y** |
 | DS-S1 | 沙箱/容器隔离是边界，审批提示不是 | AGENTS「profile≠沙箱」 | **P** | 有诚实说明；生产未默认 docker |
-| DS-S2 | **Egress allowlist** | — | **N** |
-| DS-S3 | 禁 skip-permissions / YOLO 于生产 | 禁 approvals off；**未禁 YOLO/HERMES_YOLO** | **P** |
+| DS-S2 | **Egress allowlist** | SECURITY §7 + egress attestation + observe 禁 web | **P** | 条文/声明有；主机防火墙靠部署 |
+| DS-S3 | 禁 skip-permissions / YOLO 于生产 | SECURITY/SOUL/no-yolo attestation | **Y/P** | 政策与门禁有；运行时靠部署 |
 | DS-INJ | 不依赖模型发现注入；靠权限+隔离+egress | 依赖 Hermes scan + 政策 | **P** |
-| DS-MCP1 | MCP 批准清单 / 禁临时安装 | — | **N** |
-| DS-MCP2 | MCP 钉版本（禁 @latest） | — | **N** |
-| DS-MCP3 | MCP 沙箱 + SCA | — | **N** |
-| DS-MCP4 | 工具描述变更重审 | — | **N** |
+| DS-MCP1 | MCP 批准清单 / 禁临时安装 | mcp-allowlist + mcp-supply-chain | **Y/P** | 模板有；部署须填写 |
+| DS-MCP2 | MCP 钉版本（禁 @latest） | allowlist `allow_latest_tag: false` | **Y** | |
+| DS-MCP3 | MCP 沙箱 + SCA | murphysec attestation（P2 EXT） | **P** | SCA 外挂 |
+| DS-MCP4 | 工具描述变更重审 | mcp-supply-chain `require_redescribe_review` | **P** | 规程有；无自动 diff CI |
 | DS-H1 | 不可逆动作人工决策；展示精确命令 | approvals + preflight | **Y/P** |
 | DS-H2 | 防审批疲劳：低风险 allow + 沙箱 | Hermes smart；Themis 未配 allowlist 策略 | **P** |
 | DS-H3 | Agent 不得自批自合 | approver 分离 | **P** | 逻辑有；未测 |

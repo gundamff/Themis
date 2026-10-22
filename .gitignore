@@ -1,9 +1,28 @@
-# Local PDF extraction / OCR artifacts (never commit)
+﻿# Local PDF extraction / OCR artifacts (never commit)
 _pdf_extract/
 
-# Environment secrets
+# 凭据和环境配置（绝不提交）
 config/secrets.env
 inventory/hosts.yaml
+
+# 允许模板文件
+!config/secrets.env.example
+!inventory/hosts.example.yaml
+
+# 环境文件
 *.env
 !*.env.example
-!**/*.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 审计日志（运行时产生，不属于代码）
+/var/log/hermes/
+audit.jsonl
+
+# 编辑器
+.vscode/
+.idea/
+*.swp

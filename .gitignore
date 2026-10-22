@@ -1,4 +1,7 @@
-﻿# 凭据和环境配置（绝不提交）
+﻿# Local PDF extraction / OCR artifacts (never commit)
+_pdf_extract/
+
+# 凭据和环境配置（绝不提交）
 config/secrets.env
 inventory/hosts.yaml
 

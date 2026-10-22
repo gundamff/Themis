@@ -18,10 +18,15 @@ description: >
 
 # Credential Management Specification
 
+> This specification is governed by the "no plaintext secrets" rule in the
+> repository-root `SECURITY.md`. Security boundaries and prohibitions remain
+> authoritative there; this document only defines credential loading.
+
 ## Architecture Principles
 
 ```
-config/secrets.env  (actual values, never committed to Git)
+Hermes .env / Bitwarden / 1Password / config/secrets.env
+        (secrets provider; actual values are never committed to Git)
         ↓ runtime injection
 ${VAR_NAME} in skill scripts  (placeholders, safe to commit)
         ↓ shell expansion
@@ -29,6 +34,9 @@ concrete values in actual commands
 ```
 
 In any skill file (including `.md`, `.sh`, `.py`), credentials must appear only as variable references. Actual values must never be included.
+Production deployments should prefer Bitwarden, 1Password, or another
+controlled provider. If local `config/secrets.env` is used, keep its access
+minimal and ensure Git never tracks it.
 
 ---
 

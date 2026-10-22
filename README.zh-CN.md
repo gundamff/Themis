@@ -21,7 +21,7 @@
 
 Themis 是一个**运维 Agent 框架**，而不是一个开箱即用的 Agent。它提供：
 
-- **治理层**：三定律（SOUL.md）、四角色模型、preflight 安全预检
+- **治理层**：安全铁律（`SECURITY.md`）、运维三定律（`SOUL.md`）、逻辑角色与 preflight 安全预检
 - **方法论 skill**：备份、诊断、可观测性的抽象原则
 - **基础骨架**：inventory/凭据分离、审计日志机制
 - **扩展点**：你在此框架上实现针对自己环境的具体 skill
@@ -35,32 +35,34 @@ Themis 是一个**运维 Agent 框架**，而不是一个开箱即用的 Agent�
 ### 四层架构
 
 ```
-SOUL.md（不可变三定律）
-  └─ memory/index.md + user-profile.md（极简指针）
-       └─ inventory/hosts.yaml + config/secrets.env（环境相关，gitignored）
-            └─ skills/**（方法论层 + 你的本地具体 skill）
+SECURITY.md（不可变安全铁律）
+  └─ SOUL.md（不可变运维三定律）
+       └─ AGENTS.md + Hermes Profiles（流程与物理隔离）
+            └─ memory/index.md + inventory + skills/**（路由与方法论）
 ```
 
 skill 只引用变量名（`${NODE_DB}`、`${SSH_DEFAULT_PASS}`）。切换环境只需修改 `inventory/hosts.yaml` + `secrets.env`，skill 本身不变。
 
-### 四种角色（Persona）
+### 逻辑角色与 Hermes Profiles
 
-同一 Agent 实例根据任务类型切换角色，权限逐级递增：
+四种角色保留为逻辑授权模型；生产实例通过 Hermes Profiles 做物理隔离：
 
-| Persona | 定位 | 写操作 | 典型任务 |
-|---------|------|--------|----------|
-| `observer` | 只读巡检 | 无 | 定时健康报告、告警巡查 |
-| `diagnoser` | 只读诊断 | 无（只读 SSH） | 根因分析、数据质量检查 |
-| `executor` | 受控执行 | 有（必须预检 + 审批） | 备份、配置变更、修复操作 |
-| `approver` | 审批决策 | 无 | 对高危操作签名批准/拒绝 |
+| 逻辑角色 | Profile | 硬约束 |
+|----------|---------|--------|
+| `observer` / `diagnoser` | `themis-observe` | 无写工具、无生产可写凭据 |
+| `executor` | `themis-execute` | 强制审批、预检与 security 门禁 |
+| `approver` | `themis-approve` 或 Hermes approvals | 只签核，不执行 shell、不加载可写 inventory |
 
-切换角色：`hermes chat --persona diagnoser`
+```bash
+hermes -p themis-observe
+hermes -p themis-execute
+```
 
 ---
 
 ## 运维三定律
 
-`SOUL.md` 文件包含 Agent 的不可变核心：
+`SECURITY.md` 先于 `SOUL.md` 加载，两者均不可变。`SOUL.md` 包含运维核心：
 
 - **第一定律**：系统稳定性至上（高于一切）
 - **第二定律**：服从人类指令（冲突时第一定律优先）
@@ -75,14 +77,26 @@ SOUL.md 的约束：
 
 ---
 
+## 安全与合规门禁
+
+- 部署前阅读 `SECURITY.md` 与 `AGENTS.md`。
+- 基于 `templates/profiles/` 创建隔离 profile。
+- 填写 `security/attestations/` 下的声明；example 不是有效证明。
+- 运行 `bash scripts/verify.sh`，要求退出码为 `0` 且 `FAIL: 0`。
+- Hermes 原生 approvals、隔离、promptware 防护与凭据控制以 [Hermes Security 官方文档](https://hermes-agent.nousresearch.com/docs/user-guide/security) 为准。
+
+---
+
 ## 项目结构
 
 ```
 Themis/
+├── SECURITY.md                     # 不可变安全铁律
 ├── SOUL.md                         # 三定律（不可变）
+├── AGENTS.md                       # 加载顺序、Profiles 与门禁
 ├── MIGRATION.md                    # 从已有 Hermes 配置迁移的指南
 ├── config/
-│   ├── config.example.yaml         # 4-persona 配置模板 → 复制为 config.yaml
+│   ├── config.example.yaml         # 安全默认值；逻辑角色映射见 AGENTS.md
 │   └── secrets.env.example         # 凭据模板 → 复制为 secrets.env（gitignored）
 ├── memory/
 │   ├── index.md                    # Skills 索引（触发词 → 路径）
@@ -90,6 +104,7 @@ Themis/
 ├── inventory/
 │   └── hosts.example.yaml          # 主机清单模板（变量命名约定）
 ├── skills/
+│   ├── security/                   # 安全方法论与硬门禁
 │   ├── safety/                     # 安全：预检 + 审计（三定律的执行层）
 │   ├── infra/                      # 基础：inventory 加载 + 凭据规范
 │   ├── observe/                    # 可观测性方法论（抽象原则）
@@ -149,7 +164,7 @@ https://raw.githubusercontent.com/gundamff/Themis/main/MIGRATION.md
 curl -s https://raw.githubusercontent.com/gundamff/Themis/main/MIGRATION.md
 ```
 
-迁移指南包含 4 个阶段：骨架文件 → skill 迁移 → memory 精简 → 验证。
+迁移指南包含 5 个阶段：骨架文件 → skill 迁移 → memory 映射 → profile 迁移 → 验证。
 覆盖凭据外置、IP 变量化、frontmatter 合规检查。
 完成后运行 `bash scripts/verify.sh` 验证。
 
@@ -200,6 +215,7 @@ required_vars:
 ```bash
 hermes gateway setup
 hermes gateway run
+hermes -p themis-observe
 ```
 
 ---

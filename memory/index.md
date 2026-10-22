@@ -6,7 +6,7 @@
 
 - 每行格式：`触发关键词 → skill 路径`
 - Agent 对用户输入做模糊匹配，命中则加载对应 SKILL.md
-- 一次请求可同时触发多个 skill（取交集，persona 权限约束优先）
+- 一次请求可同时触发多个 skill（取交集，Profiles 隔离约束优先）
 
 ---
 
@@ -15,8 +15,19 @@
 | 触发词 | Skill |
 |--------|-------|
 | 高危操作、删除、重启、执行前检查、审计日志、preflight、操作审批 | `skills/safety/preflight-and-audit` |
+| 威胁建模、资产分级、信任边界、攻击链、threat model | `skills/security/threat-model` |
+| 默认口令、密钥轮换、凭据泄漏、secrets provider、credential hygiene | `skills/security/credentials-hygiene` |
+| 公网暴露、端口绑定、管理面、0.0.0.0、exposure | `skills/security/exposure-control` |
+| 空认证、越权、接口鉴权、授权基线、authz | `skills/security/authz-baseline` |
+| 配置中心、消息中间件、调度平台、k8s、堡垒机、privileged plane、沙箱、docker.sock、privileged | `skills/security/privileged-plane` |
+| 安全事件、凭据吊销、失陷响应、profile 熔断、incident response | `skills/security/incident-response` |
+| MCP、模型上下文协议、工具服务器、供应链、钉版本 | `skills/security/mcp-supply-chain` |
+| 输出脱敏、工具审计、密钥回显、外泄检测 | `skills/security/output-and-audit-guards` |
+| 多 Agent、peer、委托、信任边界、级联权限 | `skills/security/multi-agent-trust` |
 
 ---
+
+> Hermes 运行时使用 `memories/`。部署时将本索引映射或导入为 `memories/themis-index.md`；仓库中的 `memory/` 保留为可审查模板源。
 
 ## 基础设施
 

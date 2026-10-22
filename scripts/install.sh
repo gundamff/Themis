@@ -32,7 +32,31 @@ copy_if_missing "config/secrets.env.example"    "config/secrets.env"
 copy_if_missing "inventory/hosts.example.yaml"  "inventory/hosts.yaml"
 copy_if_missing "memory/user-profile.example.md" "memory/user-profile.md"
 
-# Step 3: 检查 .gitignore
+# Step 3: 安装 SECURITY、attestation 示例与 profile 模板
+# 默认保持现有的仓库内初始化行为；设置 HERMES_HOME 可安装到独立 Hermes 目录。
+TARGET="${HERMES_HOME:-$BASE}"
+mkdir -p "$TARGET"
+if [ -n "${HERMES_HOME:-}" ]; then
+  copy_if_missing "SECURITY.md" "$HERMES_HOME/SECURITY.md"
+fi
+
+mkdir -p "$TARGET/security/attestations"
+for attestation in security/attestations/*.example.md; do
+  copy_if_missing "$attestation" "$TARGET/security/attestations/$(basename "$attestation")"
+done
+
+mkdir -p "$TARGET/profiles-templates"
+cp -R templates/profiles/. "$TARGET/profiles-templates/" 2>/dev/null || true
+echo "[INIT] 已复制 Hermes profile 模板到 $TARGET/profiles-templates"
+echo "下一步（二选一）："
+echo "  hermes profile create themis-observe"
+echo "  hermes profile create themis-execute"
+echo "或将模板分别复制到："
+echo "  ${HERMES_HOME:-$HOME/.hermes}/profiles/themis-observe"
+echo "  ${HERMES_HOME:-$HOME/.hermes}/profiles/themis-execute"
+echo "然后按各模板 README 合并 config.snippet.yaml（详见 INSTALL.md）。"
+
+# Step 4: 检查 .gitignore
 GITIGNORE="$BASE/.gitignore"
 if [ ! -f "$GITIGNORE" ]; then
   cat > "$GITIGNORE" << 'EOF'
@@ -55,7 +79,7 @@ else
   echo "[OK] .gitignore 已存在"
 fi
 
-# Step 4: 创建审计日志目录
+# Step 5: 创建审计日志目录
 AUDIT_DIR="/var/log/hermes"
 if [ ! -d "$AUDIT_DIR" ]; then
   if sudo mkdir -p "$AUDIT_DIR" && sudo chmod 755 "$AUDIT_DIR"; then
@@ -67,7 +91,7 @@ else
   echo "[OK] 审计目录 $AUDIT_DIR 已存在"
 fi
 
-# Step 5: 运行 verify.sh
+# Step 6: 运行 verify.sh
 echo ""
 echo "=== 运行合规检查 ==="
 bash "$BASE/scripts/verify.sh"
@@ -79,12 +103,15 @@ echo "下一步："
 echo "  1. 编辑 config/secrets.env        — 填写你的实际凭据"
 echo "  2. 编辑 inventory/hosts.yaml      — 填写你的实际 IP 和服务端点"
 echo "  3. 编辑 memory/user-profile.md    — 填写操作员信息"
+echo "  4. 填写 $TARGET/security/attestations 下的安全声明"
+echo "  5. 创建 Hermes profiles: themis-observe / themis-execute"
 echo ""
 echo "注意：Themis 是原则与方法论框架，不是开箱即用的 Agent。"
 echo "你需要在本地编写针对自身系统的具体 skill，声明 depends_on 引用方法论层。"
 echo ""
-echo "  4. 在本地创建具体 skill（参见 INSTALL.md Step 4）"
-echo "  5. hermes gateway setup   # 配置平台"
-echo "  6. hermes gateway run     # 启动服务"
+echo "  6. 在本地创建具体 skill（参见 INSTALL.md）"
+echo "  7. hermes gateway setup   # 配置平台"
+echo "  8. hermes gateway run     # 启动服务"
 echo ""
 echo "参考文档：INSTALL.md（详细步骤）| MIGRATION.md（从已有配置迁移）"
+echo ""

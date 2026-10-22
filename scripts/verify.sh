@@ -1,6 +1,6 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # scripts/verify.sh — 合规检查脚本
-# 检查三项规则：1) skills 不含明文密码  2) SOUL.md 完整性  3) 新 skill 声明了 persona/triggers
+# 五组检查 [1/5]…[5/5]：skills 密码 / SOUL / 方法论 / frontmatter / SEC 安全门禁
 # 用法: bash scripts/verify.sh
 # CI 集成: 返回非 0 表示检查失败，阻止 PR 合并
 
@@ -19,7 +19,7 @@ echo "=== Themis 合规检查 ==="
 echo ""
 
 # ── CHECK 1: skills/ 不含明文密码特征 ──────────────────────────────
-echo "--- [1/4] 检查 skills/ 中是否存在明文密码特征"
+echo "--- [1/5] 检查 skills/ 中是否存在明文密码特征"
 
 # 检测看起来像密码的模式（含特殊字符的短字符串，排除注释行和变量引用）
 BAD_PATTERNS=(
@@ -45,7 +45,7 @@ fi
 
 # ── CHECK 2: SOUL.md 完整性 ────────────────────────────────────────
 echo ""
-echo "--- [2/4] 检查 SOUL.md 完整性"
+echo "--- [2/5] 检查 SOUL.md 完整性"
 
 SOUL="SOUL.md"
 if [ ! -f "$SOUL" ]; then
@@ -64,7 +64,7 @@ fi
 
 # ── CHECK 3: 三个方法论 SKILL.md 存在 ─────────────────────────────
 echo ""
-echo "--- [3/4] 检查方法论 SKILL.md 是否存在"
+echo "--- [3/5] 检查方法论 SKILL.md 是否存在"
 
 for methodology in "skills/observe/SKILL.md" "skills/diagnose/SKILL.md" "skills/backup/SKILL.md"; do
   if [ -f "$methodology" ]; then
@@ -76,7 +76,7 @@ done
 
 # ── CHECK 4: 每个 SKILL.md 声明了 persona 和 triggers ─────────────
 echo ""
-echo "--- [4/4] 检查每个 SKILL.md 的 frontmatter 完整性"
+echo "--- [4/5] 检查每个 SKILL.md 的 frontmatter 完整性"
 
 while IFS= read -r -d '' skill_file; do
   skill_name=$(dirname "$skill_file" | xargs basename)
@@ -104,6 +104,324 @@ while IFS= read -r -d '' skill_file; do
     ok "$skill_file frontmatter 完整"
   fi
 done < <(find skills/ -name "SKILL.md" -print0 2>/dev/null)
+
+# ── CHECK 5: SEC 安全门禁 ─────────────────────────────────────────
+check_sec_soul() {
+  # --- SEC-SOUL ---
+  if [ ! -f "SECURITY.md" ]; then
+    red "SEC-SOUL: SECURITY.md 不存在"
+  else
+    for required in "immutable: true" "override: forbidden" "load: always" \
+      "身份最小权限" "密钥不落明文" "禁止空认证" "管理面零公网" "读写隔离" \
+      "不可静默关闭防护" "外联受控" "HERMES_YOLO_MODE"; do
+      if grep -qF "$required" "SECURITY.md"; then
+        ok "SEC-SOUL: 含 $required"
+      else
+        red "SEC-SOUL: 缺少 $required"
+      fi
+    done
+  fi
+  # 方案 C：SOUL 须含运行时安全短铁律
+  if [ -f "SOUL.md" ]; then
+    if grep -qF "安全铁律（运行时摘要" "SOUL.md" && grep -qF "外联受控" "SOUL.md"; then
+      ok "SEC-SOUL: SOUL.md 含运行时安全摘要（方案 C）"
+    else
+      red "SEC-SOUL: SOUL.md 缺少运行时安全摘要或外联受控"
+    fi
+  fi
+}
+
+check_sec_bind() {
+  # --- SEC-BIND ---
+  if [ -f "config/config.example.yaml" ]; then
+    UNMARKED_BIND=$(grep -nE 'host:\s*"?0\.0\.0\.0"?' config/config.example.yaml \
+      | grep -vE '#.*(EXCEPTION|例外)' || true)
+    if [ -n "$UNMARKED_BIND" ]; then
+      red "SEC-BIND: config.example 默认暴露 0.0.0.0（须改为 127.0.0.1 或标注例外）"
+    else
+      ok "SEC-BIND: 无未标注的 0.0.0.0 绑定"
+    fi
+  fi
+}
+
+check_sec_approvals() {
+  # --- SEC-APPROVALS ---
+  if [ -f "config/config.example.yaml" ]; then
+    if grep -qE 'approvals:[[:space:]]*$|approvals:' config/config.example.yaml; then
+      if grep -A5 -E '^approvals:' config/config.example.yaml | grep -qE 'mode:\s*off'; then
+        red "SEC-APPROVALS: 生产模板不得 approvals.mode: off"
+      else
+        ok "SEC-APPROVALS: approvals 未设为 off"
+      fi
+    else
+      red "SEC-APPROVALS: config.example 缺少 approvals 配置块"
+    fi
+  fi
+}
+
+check_sec_profile() {
+  # --- SEC-PROFILE ---
+  for d in templates/profiles/themis-observe templates/profiles/themis-execute; do
+    if [ -d "$d" ]; then ok "SEC-PROFILE: $d 存在"; else red "SEC-PROFILE: 缺少 $d"; fi
+  done
+}
+
+check_sec_observe() {
+  # --- SEC-OBSERVE: 只读落到 Hermes 原生键 ---
+  local obs="templates/profiles/themis-observe/config.snippet.yaml"
+  if [ ! -f "$obs" ]; then
+    red "SEC-OBSERVE: 缺少 $obs"
+    return
+  fi
+  if ! grep -qE 'disabled_toolsets:' "$obs"; then
+    red "SEC-OBSERVE: 缺少 agent.disabled_toolsets"
+  else
+    for ts in browser web code_execution; do
+      if grep -qE "^\s*-\s*${ts}\s*$" "$obs"; then
+        ok "SEC-OBSERVE: disabled $ts"
+      else
+        red "SEC-OBSERVE: 未禁用 toolset $ts"
+      fi
+    done
+  fi
+  if grep -qE 'approvals:' "$obs" && grep -A30 -E '^approvals:' "$obs" | grep -qE 'deny:'; then
+    ok "SEC-OBSERVE: 含 approvals.deny"
+  else
+    red "SEC-OBSERVE: 缺少 approvals.deny"
+  fi
+  if grep -qE 'backend:\s*docker' "$obs"; then
+    ok "SEC-OBSERVE: terminal.backend docker"
+  else
+    red "SEC-OBSERVE: 未默认 docker 后端"
+  fi
+}
+
+check_sec_deny() {
+  # --- SEC-DENY: 全局模板须有 approvals.deny ---
+  if [ -f "config/config.example.yaml" ]; then
+    if grep -A40 -E '^approvals:' config/config.example.yaml | grep -qE 'deny:'; then
+      ok "SEC-DENY: config.example 含 approvals.deny"
+    else
+      red "SEC-DENY: config.example 缺少 approvals.deny"
+    fi
+  fi
+}
+
+check_sec_docker() {
+  # --- SEC-DOCKER: 生产模板默认容器 ---
+  if [ -f "config/config.example.yaml" ]; then
+    if grep -A10 -E '^terminal:' config/config.example.yaml | grep -qE 'backend:\s*docker'; then
+      ok "SEC-DOCKER: config.example terminal.backend=docker"
+    else
+      red "SEC-DOCKER: config.example 未默认 docker"
+    fi
+  fi
+}
+
+check_sec_yolo() {
+  # --- SEC-YOLO ---
+  if [ -f "security/attestations/no-yolo-production.example.md" ]; then
+    ok "SEC-YOLO: no-yolo attestation 模板存在"
+  else
+    red "SEC-YOLO: 缺少 security/attestations/no-yolo-production.example.md"
+  fi
+  if grep -qE 'HERMES_YOLO_MODE' config/config.example.yaml config/secrets.env.example 2>/dev/null; then
+    ok "SEC-YOLO: 配置模板提及禁 YOLO"
+  else
+    red "SEC-YOLO: 配置模板未提及 HERMES_YOLO_MODE"
+  fi
+}
+
+check_sec_egress() {
+  # --- SEC-EGRESS ---
+  if [ -f "security/attestations/egress-allowlist.example.md" ]; then
+    ok "SEC-EGRESS: egress-allowlist attestation 模板存在"
+  else
+    red "SEC-EGRESS: 缺少 security/attestations/egress-allowlist.example.md"
+  fi
+  if grep -qiE 'egress' config/config.example.yaml AGENTS.md SECURITY.md 2>/dev/null; then
+    ok "SEC-EGRESS: 文档/配置提及 egress"
+  else
+    red "SEC-EGRESS: 未在文档或配置中提及 egress"
+  fi
+}
+
+check_sec_authz() {
+  local skill="skills/security/authz-baseline/SKILL.md"
+  if [ -f "$skill" ]; then ok "SEC-SKILL: $skill"; else red "SEC-SKILL: 缺少 $skill"; fi
+}
+
+check_sec_privplane() {
+  local skill="skills/security/privileged-plane/SKILL.md"
+  if [ -f "$skill" ]; then ok "SEC-SKILL: $skill"; else red "SEC-SKILL: 缺少 $skill"; fi
+}
+
+check_sec_skills() {
+  # --- SEC-AUTHZ / SEC-PRIVPLANE / 其余 security skills ---
+  for skill in \
+    skills/security/threat-model/SKILL.md \
+    skills/security/credentials-hygiene/SKILL.md \
+    skills/security/exposure-control/SKILL.md \
+    skills/security/incident-response/SKILL.md \
+    skills/security/mcp-supply-chain/SKILL.md \
+    skills/security/output-and-audit-guards/SKILL.md \
+    skills/security/multi-agent-trust/SKILL.md
+  do
+    if [ -f "$skill" ]; then ok "SEC-SKILL: $skill"; else red "SEC-SKILL: 缺少 $skill"; fi
+  done
+  check_sec_authz
+  check_sec_privplane
+}
+
+check_sec_ext() {
+  # --- SEC-EXT (P2): 外挂证据模板 + 附录 + 多 Agent 专章 ---
+  for f in \
+    security/attestations/gshark-scan.example.md \
+    security/attestations/murphysec-sca.example.md \
+    security/attestations/runtime-ids-overlay.example.md \
+    security/attestations/container-hardening-overlay.example.md \
+    docs/security/external-overlays.md \
+    skills/security/multi-agent-trust/SKILL.md
+  do
+    if [ -f "$f" ]; then ok "SEC-EXT: $f"; else red "SEC-EXT: 缺少 $f"; fi
+  done
+  if grep -qF "多 Agent" AGENTS.md 2>/dev/null || grep -qF "multi-agent-trust" AGENTS.md 2>/dev/null; then
+    ok "SEC-EXT: AGENTS 提及多 Agent / 外部叠层"
+  else
+    red "SEC-EXT: AGENTS.md 未提及多 Agent 或外部叠层"
+  fi
+}
+
+check_sec_default() {
+  # --- SEC-DEFAULT: 禁止示例中的典型默认口令字面量 ---
+  DEFAULT_HITS=$(grep -rnE --include='*.md' --include='*.yaml' --include='*.yml' --include='*.env*' \
+    -E 'apollo/admin|password:\s*admin\b|password:\s*public\b|NACOS_AUTH_TOKEN|admin/public' \
+    config/ inventory/ templates/ skills/security/ 2>/dev/null | grep -v '禁止\|示例错误\|BAD EXAMPLE\|# BAD' || true)
+  if [ -n "$DEFAULT_HITS" ]; then
+    red "SEC-DEFAULT: 发现疑似默认口令字面量"
+    echo "$DEFAULT_HITS" | head -20
+  else
+    ok "SEC-DEFAULT: 未发现默认口令字面量"
+  fi
+}
+
+check_sec_secrets() {
+  # --- SEC-SECRETS: attestation 模板存在 ---
+  if [ -f "security/attestations/secrets-provider.example.md" ]; then
+    ok "SEC-SECRETS: secrets-provider attestation 模板存在"
+  else
+    red "SEC-SECRETS: 缺少 security/attestations/secrets-provider.example.md"
+  fi
+}
+
+check_sec_sandbox() {
+  # --- SEC-SANDBOX (P1-9) ---
+  if [ -f "security/attestations/sandbox-not-privileged.example.md" ]; then
+    ok "SEC-SANDBOX: sandbox-not-privileged attestation 模板存在"
+  else
+    red "SEC-SANDBOX: 缺少 security/attestations/sandbox-not-privileged.example.md"
+  fi
+  if grep -qiE 'docker\.sock|privileged' skills/security/privileged-plane/SKILL.md 2>/dev/null; then
+    ok "SEC-SANDBOX: privileged-plane 含沙箱/逃逸专条"
+  else
+    red "SEC-SANDBOX: privileged-plane 缺少 privileged/docker.sock 专条"
+  fi
+}
+
+check_sec_ticket() {
+  # --- SEC-TICKET (P1-5) ---
+  if [ -f "security/schemas/approval-ticket.example.yaml" ]; then
+    ok "SEC-TICKET: approval-ticket schema 存在"
+  else
+    red "SEC-TICKET: 缺少 security/schemas/approval-ticket.example.yaml"
+  fi
+  local pf="skills/safety/preflight-and-audit/SKILL.md"
+  if [ -f "$pf" ] && grep -qF "argv_digest" "$pf" && grep -qF "expires_at" "$pf"; then
+    ok "SEC-TICKET: preflight 含 argv_digest/expires_at"
+  else
+    red "SEC-TICKET: preflight 缺少 argv_digest 或 expires_at"
+  fi
+}
+
+check_sec_mcp() {
+  # --- SEC-MCP (P1-6) ---
+  local al="security/mcp-allowlist.example.yaml"
+  if [ -f "$al" ]; then
+    ok "SEC-MCP: mcp-allowlist 模板存在"
+    if grep -qE 'allow_ad_hoc_install:\s*false' "$al" && grep -qE 'allow_latest_tag:\s*false' "$al"; then
+      ok "SEC-MCP: 禁临时安装与 @latest"
+    else
+      red "SEC-MCP: allowlist 未将 ad_hoc/@latest 设为 false"
+    fi
+  else
+    red "SEC-MCP: 缺少 $al"
+  fi
+  if [ -f "skills/security/mcp-supply-chain/SKILL.md" ]; then
+    ok "SEC-MCP: mcp-supply-chain skill 存在"
+  else
+    red "SEC-MCP: 缺少 skills/security/mcp-supply-chain/SKILL.md"
+  fi
+  if [ -f "security/attestations/mcp-allowlist.example.md" ]; then
+    ok "SEC-MCP: mcp-allowlist attestation 模板存在"
+  else
+    red "SEC-MCP: 缺少 security/attestations/mcp-allowlist.example.md"
+  fi
+}
+
+check_sec_output() {
+  # --- SEC-OUTPUT (P1-8) ---
+  if [ -f "skills/security/output-and-audit-guards/SKILL.md" ]; then
+    ok "SEC-OUTPUT: output-and-audit-guards skill 存在"
+  else
+    red "SEC-OUTPUT: 缺少 skills/security/output-and-audit-guards/SKILL.md"
+  fi
+  local sch="security/schemas/audit-tool-event.example.json"
+  if [ -f "$sch" ] && grep -qF "tool_name" "$sch"; then
+    ok "SEC-OUTPUT: audit-tool-event schema 含 tool_name"
+  else
+    red "SEC-OUTPUT: 缺少含 tool_name 的 audit-tool-event schema"
+  fi
+}
+
+check_sec_adv() {
+  # --- SEC-ADV (P1-7) ---
+  if [ ! -f "tests/adversarial/cases.md" ]; then
+    red "SEC-ADV: 缺少 tests/adversarial/cases.md"
+  else
+    ok "SEC-ADV: adversarial cases 存在"
+  fi
+  if [ ! -f "scripts/verify-adversarial.sh" ]; then
+    red "SEC-ADV: 缺少 scripts/verify-adversarial.sh"
+    return
+  fi
+  ok "SEC-ADV: verify-adversarial.sh 存在"
+  if bash scripts/verify-adversarial.sh; then
+    ok "SEC-ADV: 对抗静态检查通过"
+  else
+    red "SEC-ADV: 对抗静态检查失败"
+  fi
+}
+
+echo ""
+echo "--- [5/5] SEC 安全门禁"
+check_sec_soul
+check_sec_bind
+check_sec_approvals
+check_sec_deny
+check_sec_docker
+check_sec_profile
+check_sec_observe
+check_sec_yolo
+check_sec_egress
+check_sec_sandbox
+check_sec_ticket
+check_sec_mcp
+check_sec_output
+check_sec_skills
+check_sec_default
+check_sec_secrets
+check_sec_adv
+check_sec_ext
 
 # ── 结果汇总 ──────────────────────────────────────────────────────
 echo ""

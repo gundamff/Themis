@@ -1,0 +1,62 @@
+# themis-observe — 合并到 profile 的 config.yaml
+# 只读观测/诊断：用 Hermes 原生键限制工具与外联（非自拟 deny_tools）
+
+soul: SOUL.md
+# 同目录必须有 SECURITY.md；SOUL 已含安全短铁律（方案 C）
+
+approvals:
+  mode: smart
+  timeout: 300
+  cron_mode: deny
+  single_query_mode: deny
+  unattended_mode: deny
+  deny:
+    - "rm -rf *"
+    - "mkfs*"
+    - "dd if=*"
+    - "shutdown*"
+    - "reboot*"
+    - "poweroff*"
+    - "kubectl delete *"
+    - "kubectl apply *"
+    - "helm uninstall *"
+    - "systemctl stop *"
+    - "systemctl restart *"
+    - "docker rm *"
+    - "docker rmi *"
+
+terminal:
+  # 诊断若需 shell：仍用容器，且不转发密钥
+  backend: docker
+  docker_forward_env: []
+
+agent:
+  # 官方 toolset 名：https://hermes-agent.nousresearch.com/docs/reference/toolsets-reference
+  # 关闭写能力、任意外联与高能动性工具，打断 lethal trifecta 的「外联」腿
+  disabled_toolsets:
+    - code_execution
+    - computer_use
+    - browser
+    - web
+    - image_gen
+    - video_gen
+    - delegation
+    - cronjob
+    - discord_admin
+    - connections
+    - kanban
+
+memory:
+  - memory/index.md
+  - memory/user-profile.md
+
+inventory: inventory/hosts.yaml
+# 只读凭据：使用脱敏 secrets 或不挂载可写生产口令
+secrets: config/secrets.env
+
+audit:
+  sink: null
+
+# Themis 策略备注（非 Hermes 键）：persona=observer|diagnoser
+# 文件写入：在 profile .env 设置 HERMES_WRITE_SAFE_ROOT 指向空/只读沙箱前缀，
+# 以硬阻挡 write_file/patch（见 Hermes Security — File write safety）。

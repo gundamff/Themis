@@ -8,13 +8,16 @@
 #
 # skill 脚本中只写 ${NODE_DB}、${KAFKA_BOOTSTRAP} 等变量名，不硬编码 IP。
 # 切换环境时，只修改本文件，skill 保持不变。
+# 管理端口默认仅在本机或专用管理网可达，不得直接暴露到公网；
+# 确需公网访问时，必须先完成书面例外、来源 allowlist 与 MFA。
 
 # ── 全局 SSH 默认 ─────────────────────────────────────────────────
 ssh_defaults:
   user: "${SSH_DEFAULT_USER}"
   password_env: "SSH_DEFAULT_PASS"   # 指向 secrets.env 中的变量名
   connect_timeout: 5
-  strict_host_key_checking: false
+  # 默认校验主机密钥，避免首次连接或中间人攻击时静默信任未知主机。
+  strict_host_key_checking: true
 
 # ── 主机清单 ──────────────────────────────────────────────────────
 # 每台主机声明 alias（供 skill 脚本中 ${NODE_XXX} 引用）、IP、角色、关键服务。

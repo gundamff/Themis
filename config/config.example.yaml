@@ -1,145 +1,92 @@
-﻿# Hermes Ops Agent — 配置示例
-# 复制本文件为 config.yaml，按你的环境填写
-# 敏感值（密码/密钥）一律写入 config/secrets.env，此处只引用变量名
+﻿# Hermes Ops Agent — 配置示例（Themis 安全硬化默认）
+# 复制为本机/profile 的 config.yaml 后按环境填写。
+# 敏感值写入 .env / secrets.env / Bitwarden / 1Password，禁止明文入库。
 
-# ── 核心法则（不可变，必须指向 SOUL.md）──────────────────────────────
+# ── 核心法则 ───────────────────────────────────────────────────────
 soul: SOUL.md
+# 权威安全全文：SECURITY.md（须与 SOUL 同目录；SOUL 内已含运行时短铁律）
 
-# ── 运行时加载的记忆文件 ────────────────────────────────────────────
+# ── 审批（生产禁止 off；禁止依赖 YOLO）────────────────────────────
+approvals:
+  mode: smart                 # smart | manual；禁止 off
+  timeout: 300
+  cron_mode: deny
+  single_query_mode: deny
+  unattended_mode: deny
+  # 硬否决：即使 YOLO / mode:off 也不可执行（Hermes 原生）
+  deny:
+    - "rm -rf *"
+    - "mkfs*"
+    - "dd if=*"
+    - "> /dev/sd*"
+    - "shutdown*"
+    - "reboot*"
+    - "poweroff*"
+    - "kubectl delete *"
+    - "helm uninstall *"
+
+# ── 终端后端（生产默认容器隔离）──────────────────────────────────
+# local 仅用于可信开发机。网关/生产请用 docker（或 modal/daytona/vercel_sandbox）。
+# 注意：容器后端下 Hermes 可能跳过「危险命令审批」（容器即边界）；
+# 业务变更仍须走 Themis preflight + 人工审批，不可把「在容器里」当成免审。
+terminal:
+  backend: docker
+  docker_image: "nousresearch/hermes-sandbox:desktop"
+  docker_forward_env: []      # 默认不向容器注入密钥；按需显式添加
+  # env_passthrough: []
+
+# ── Agent 工具策略 ────────────────────────────────────────────────
+agent:
+  # 名称以官方 Toolsets Reference 为准：
+  # https://hermes-agent.nousresearch.com/docs/reference/toolsets-reference
+  disabled_toolsets: []       # 全局禁用列表；observe profile 见 templates/profiles
+
+# ── 运行时记忆（对齐 Hermes memories/ 时按安装文档映射）──────────
 memory:
-  - memory/index.md          # skills 索引，触发词 → 路径
-  - memory/user-profile.md   # 操作员偏好与授权范围
+  - memory/index.md
+  - memory/user-profile.md
 
-# ── 基础设施清单与凭据 ─────────────────────────────────────────────
-inventory: inventory/hosts.yaml    # 主机/服务清单（不含密码）
-secrets:   config/secrets.env      # 凭据文件（必须在 .gitignore 中）
+# ── 清单与凭据 ────────────────────────────────────────────────────
+inventory: inventory/hosts.yaml
+secrets: config/secrets.env
 
-# ── 平台适配器（保持与你的 Hermes 网关版本一致）─────────────────────
+# ── 平台 / 网关暴露面 ─────────────────────────────────────────────
 platforms:
   api_server:
     enabled: true
-    host: "0.0.0.0"
+    host: "127.0.0.1"         # 禁止默认 0.0.0.0
     port: 8642
     cors_origins:
-      - "http://localhost:3000"   # Open WebUI 地址
+      - "http://localhost:3000"
   webhook:
-    enabled: false                # 需要时改为 true，见 skills/integrate/webhook-subscriptions
-    host: "0.0.0.0"
+    enabled: false
+    host: "127.0.0.1"
     port: 8644
-    secret: "${WEBHOOK_SECRET}"   # 从 secrets.env 注入
+    secret: "${WEBHOOK_SECRET}"
 
-# ── 审计 ────────────────────────────────────────────────────────────
+# 网关用户授权：生产必须配置 allowlist，禁止 GATEWAY_ALLOW_ALL_USERS=true
+# 在 profile 的 .env 中设置（示例）：
+#   GATEWAY_ALLOWED_USERS=your_id
+#   TELEGRAM_ALLOWED_USERS=...
+# 未配置 allowlist 且未 allow-all 时，Hermes 默认拒绝所有用户（fail-closed）。
+
+# ── Egress（致命三角之一）─────────────────────────────────────────
+# Agent 同时具备：私有数据 + 不可信内容 + 任意外联 = 高危。
+# 生产要求：浏览器/web 工具按需禁用（见 observe profile）；
+# 容器网络使用防火墙/egress allowlist；禁止生产 HERMES_YOLO_MODE=1。
+
+# ── MCP（供应链）──────────────────────────────────────────────────
+# 生产仅启用 security/mcp-allowlist.yaml 中的 server；禁止 @latest 与会话临时安装。
+# 见 skills/security/mcp-supply-chain 与 attestations/mcp-allowlist.*.md。
+
+# ── 审批票据（规程）────────────────────────────────────────────────
+# 高危执行须 argv_digest 绑定的 Approval Ticket；见 security/schemas/approval-ticket.example.yaml。
+
+# ── 审计 ──────────────────────────────────────────────────────────
 audit:
-  sink: "/var/log/hermes/audit.jsonl"   # executor persona 的写操作强制落盘
+  sink: "/var/log/hermes/audit.jsonl"
   rotate: daily
   retain_days: 90
 
-# ── Persona 定义 ─────────────────────────────────────────────────────
-# 同一个 Agent 实例，按任务类型切换 persona。
-# 切换命令示例：hermes chat --persona observer
-#
-# 权限层级: observer < diagnoser < executor，approver 独立于三者之外。
-# 原则: 能用 observer 就不用 diagnoser，能用 diagnoser 就不用 executor。
-
-personas:
-
-  # ── observer ────────────────────────────────────────────────────
-  observer:
-    role: "生产系统只读巡检员，负责定时健康检查与状态报告。"
-    description: |
-      只读。只能查询指标、生成报告、发送通知。
-      不得执行任何 SSH 写操作，不得修改任何配置或数据。
-    allow_skills:
-      - "observe"
-      - "infra/inventory-loader"
-    deny_tools:
-      - shell_exec        # 禁止直接 shell，只允许通过 skill 封装的只读命令
-      - file_write
-    allow_shell_patterns: []    # observer 不直接执行 shell
-    requires_approval_for: []
-    audit_sink: null            # 只读操作不强制审计
-
-  # ── diagnoser ────────────────────────────────────────────────────
-  diagnoser:
-    role: "故障诊断分析师，负责根因分析与诊断报告，不执行修复。"
-    description: |
-      只读 + 分析。可通过 skill 封装的脚本执行只读 SSH 命令。
-      禁止任何改动性操作——包括重启服务、修改配置、写入数据。
-      输出格式：根因报告 + 建议修复步骤（供 executor 或人工执行）。
-    allow_skills:
-      - "observe"
-      - "diagnose"
-      - "infra/*"
-    deny_tools:
-      - file_write
-    allow_shell_patterns:
-      - "^ps "
-      - "^ss "
-      - "^netstat "
-      - "^grep "
-      - "^cat "
-      - "^tail "
-      - "^du "
-      - "^df "
-      - "^free "
-      - "^top "
-      - "^echo srvr"
-      - "mongosh.*--readPreference"
-      - "^SELECT "
-      - "^SHOW "
-      - "^DESCRIBE "
-      - "redis-cli.*INFO"
-      - "kafka-topics.sh.*--describe"
-      - "kafka-consumer-groups.sh.*--describe"
-    requires_approval_for: []
-    audit_sink: null
-
-  # ── executor ─────────────────────────────────────────────────────
-  executor:
-    role: "运维执行者，在严格三定律约束下执行写操作与变更。"
-    description: |
-      可写。所有写操作必须先调用 safety/preflight-and-audit 完成预检。
-      高危关键词命中时自动暂停并请求 approver 签名，未获批准前不执行。
-      所有操作结果写入 audit_sink，不可跳过。
-    allow_skills:
-      - "*"               # 全部 skill 可用，但受 requires_approval_for 约束
-    required_preflight: "skills/safety/preflight-and-audit"
-    requires_approval_for:
-      # 精确匹配（大小写不敏感）
-      - "DELETE"
-      - "DROP"
-      - "TRUNCATE"
-      - "ALTER TABLE"
-      - "rm -rf"
-      - "shutdown"
-      - "reboot"
-      - "poweroff"
-      - "migrate"
-      - "stop.*kafka"
-      - "stop.*zookeeper"
-      - "systemctl stop"
-      - "docker rm"
-      - "docker rmi"
-    audit_sink: "/var/log/hermes/audit.jsonl"   # 与全局 audit.sink 保持一致
-    backup_required: true      # 高危操作前必须确认 backup_verified=true
-
-  # ── approver ─────────────────────────────────────────────────────
-  approver:
-    role: "高危操作审批人，只做 approve/reject 决策，不执行任何操作。"
-    description: |
-      接收输入：trace_id + 预检报告（由 executor 的 preflight 生成）。
-      输出格式严格限定为：decision(approve|reject) + reason + signature(sha256)。
-      不得执行 shell 命令，不得访问生产系统，不得加载 infra/inventory-loader。
-      approve 后由 executor 继续执行，approver 本身不做任何变更。
-    allow_skills:
-      - "safety/preflight-and-audit"   # 只读审计记录，核对 trace_id
-    deny_tools:
-      - shell_exec
-      - file_write
-      - ssh
-    requires_approval_for: []
-    output_schema:
-      decision: "approve | reject"
-      reason: "string (必填，≥10字)"
-      trace_id: "string (来自预检报告)"
-      signature: "sha256(decision+reason+trace_id+timestamp)"
+# ── 逻辑角色 ──────────────────────────────────────────────────────
+# 见 AGENTS.md；物理隔离用 templates/profiles/themis-{observe,execute,approve}/

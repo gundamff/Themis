@@ -23,6 +23,7 @@ bash scripts/install.sh
 
 脚本自动完成：
 - 从 `.example` 模板复制配置文件（不覆盖已有文件）
+- 复制 `SECURITY.md`、profile 模板与 attestation 示例
 - 检查 `.gitignore`（确保 `secrets.env` 和 `hosts.yaml` 不提交）
 - 创建审计日志目录
 - 运行 `verify.sh` 基本检查
@@ -51,7 +52,20 @@ vi inventory/hosts.yaml
 vi memory/user-profile.md
 ```
 
-### Step 4：编写你的具体 skill
+### Step 4：创建隔离 Profiles
+
+```bash
+hermes profile create themis-observe
+hermes profile create themis-execute
+```
+
+将 `profiles-templates/themis-observe/` 和 `profiles-templates/themis-execute/` 中的配置合并到对应 profile。生产环境必须保持只读与执行凭据分离；可选的 `themis-approve` 只用于签核。
+
+### Step 5：填写安全声明
+
+安装脚本会将 `.example.md` 复制到目标目录的 `security/attestations/`。根据实际环境填写默认口令清零、管理面非公网、关键面 MFA 与 secrets provider 声明；示例文件本身不算证明。
+
+### Step 6：编写你的具体 skill
 
 Themis 提供方法论框架，具体的系统 skill 需要你自己实现。在本地创建 skill 文件，声明 `depends_on` 引用方法论层：
 
@@ -72,7 +86,7 @@ required_vars:
 # 在此处编写你的 MongoDB 备份命令
 ```
 
-### Step 5：配置并启动 Hermes
+### Step 7：配置并启动 Hermes
 
 ```bash
 hermes gateway setup   # 首次配置平台
@@ -90,15 +104,23 @@ memory:
   - memory/user-profile.md
 ```
 
-### Step 6：验证
+### Step 8：验证
 
 ```bash
-# 检查网关
+# 先运行仓库合规门禁；必须 EXIT 0 且 FAIL: 0
+bash scripts/verify.sh
+
+# 再检查网关
 curl http://localhost:8642/health
 
-# 以 observer 身份测试（只读，最安全）
-hermes chat --persona observer "当前系统状态如何？"
+# 使用只读 profile 测试
+hermes -p themis-observe
+
+# 仅在需要执行经审批变更时使用
+hermes -p themis-execute
 ```
+
+Hermes 原生 approvals、隔离、promptware 防护与凭据控制请参考 [Hermes Security 官方文档](https://hermes-agent.nousresearch.com/docs/user-guide/security)。
 
 ---
 
@@ -108,7 +130,7 @@ hermes chat --persona observer "当前系统状态如何？"
 
 ```
 config/config.yaml 中的 platforms.api_server 配置：
-  host: "0.0.0.0"
+  host: "127.0.0.1"
   port: 8642
   cors_origins:
     - "<Open WebUI 地址>"   # 例如 http://localhost:3000
@@ -116,6 +138,9 @@ config/config.yaml 中的 platforms.api_server 配置：
 Open WebUI 连接设置：
   API URL: http://<Hermes 主机地址>:8642/v1
   （从 Docker 容器访问宿主机需用 host.docker.internal）
+
+需要远程访问时优先使用受认证的反向代理或隧道。
+禁止无书面例外、IP allowlist、MFA 与 TLS 保护地绑定 0.0.0.0。
 
 重启命令：
   sudo hermes gateway restart --system

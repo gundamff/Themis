@@ -1,0 +1,17 @@
+# Approval Ticket — 规程级审批票据（OA-1.4）
+# 高危执行前必须持有未过期、未消费、且 argv_digest 匹配的票据。
+# 诚实边界：若 Hermes 无强制中间件，校验由 preflight skill + 对抗静态检查保证。
+
+ticket_id: "00000000-0000-4000-8000-000000000001"
+trace_id: "00000000-0000-4000-8000-000000000002"
+actor: "approver-role-or-id"
+tool: "terminal"
+# 对规范化后的命令行 / 参数做 sha256；执行前必须与即将运行的命令一致
+argv_digest: "sha256:REPLACE_WITH_DIGEST_OF_CANONICAL_ARGV"
+scope: "abstract-target-not-a-real-host"
+risk_level: high          # low|medium|high|critical
+issued_at: "2026-10-22T00:00:00Z"
+expires_at: "2026-10-22T00:30:00Z"   # 建议 ≤ 30 分钟
+nonce: "REPLACE_WITH_RANDOM_NONCE"
+consumed: false
+step_up_mfa: false        # risk_level=critical 时须为 true

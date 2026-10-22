@@ -1,7 +1,7 @@
 # Themis × Hermes 对齐与安全加固设计
 
 **日期：** 2026-10-22  
-**状态：** 待用户审阅（批准后进入 implementation plan）  
+**状态：** 已批准；实施计划见 `docs/superpowers/plans/2026-10-22-themis-hermes-security.md`  
 **交付形态：** 大一统 PR（方案 1）  
 **仓库：** https://github.com/gundamff/Themis  
 

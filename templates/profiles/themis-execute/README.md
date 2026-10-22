@@ -9,6 +9,12 @@
 - 所有写操作落盘审计（见 snippet 中 `audit`）。
 - Profile home 须同时存在 `SOUL.md` 与 `SECURITY.md`。
 
+## 配置键边界
+
+- `approvals` 是 Hermes 原生审批控制，必须按安装版本的官方配置格式启用。
+- snippet 中的 `persona`、`required_preflight`、`allow_skills`、`requires_approval_for`、`audit` 与 `backup_required` 表达 Themis 的策略意图；除非已由本地集成验证，不应假定它们都是 Hermes 原生配置键。
+- 若要限制 executor 工具权限，应将策略映射为当前 Hermes 版本支持的 `agent.disabled_toolsets` 和/或工具 allowlist，并核对实际工具集名称。
+
 ## 安装（概要）
 
 1. 创建 profile：`hermes profile create themis-execute`（或拷贝本目录到 `$HERMES_HOME/profiles/themis-execute`）。

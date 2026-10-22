@@ -32,10 +32,12 @@ hermes gateway setup
 # platforms:
 #   webhook:
 #     enabled: true
-#     host: "0.0.0.0"
+#     host: "127.0.0.1"
 #     port: 8644
 #     secret: "${WEBHOOK_SECRET}"
 ```
+
+默认仅绑定回环地址。若必须绑定公网地址，须按 `SECURITY.md` 先完成书面例外、来源 allowlist 与 MFA，缺一项都不得开放。
 
 启动网关：
 

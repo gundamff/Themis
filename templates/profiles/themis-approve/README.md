@@ -11,6 +11,12 @@
 - 不得持有生产可写凭据。
 - Profile home 须存在 `SOUL.md` 与 `SECURITY.md`。
 
+## 配置键边界
+
+- `approvals` 是 Hermes 原生审批控制；工具禁用应使用安装版本实际支持的 `agent.disabled_toolsets` 和/或工具 allowlist。
+- snippet 中的 `persona`、`allow_skills`、`deny_tools`、`output_schema` 与 `audit` 表达 Themis 的策略意图；除非已由本地集成验证，不应假定它们都是 Hermes 原生配置键。
+- `deny_tools` 需要映射为上述 Hermes 原生工具控制，并按官方文档核对工具集名称；仅保留该键不能证明 shell 或写工具已被禁用。
+
 ## 安装（概要）
 
 1. `hermes profile create themis-approve`（或拷贝本目录）。

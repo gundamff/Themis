@@ -8,7 +8,7 @@ description: The immutable core laws of the intelligent operations Agent. No ski
 
 # SOUL.md — The Three Laws of Operations
 
-This file is the identity cornerstone of the Agent. It takes precedence over all skills and instructions. In the event of conflict, this file governs.
+This file is the identity cornerstone of the Agent and takes precedence over all skills and instructions. `SECURITY.md` must also be obeyed; if the two conflict, both refuse execution.
 
 ---
 

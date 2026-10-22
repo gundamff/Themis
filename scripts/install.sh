@@ -36,7 +36,9 @@ copy_if_missing "memory/user-profile.example.md" "memory/user-profile.md"
 # 默认保持现有的仓库内初始化行为；设置 HERMES_HOME 可安装到独立 Hermes 目录。
 TARGET="${HERMES_HOME:-$BASE}"
 mkdir -p "$TARGET"
-copy_if_missing "SECURITY.md" "$TARGET/SECURITY.md"
+if [ -n "${HERMES_HOME:-}" ]; then
+  copy_if_missing "SECURITY.md" "$HERMES_HOME/SECURITY.md"
+fi
 
 mkdir -p "$TARGET/security/attestations"
 for attestation in security/attestations/*.example.md; do
@@ -46,7 +48,13 @@ done
 mkdir -p "$TARGET/profiles-templates"
 cp -R templates/profiles/. "$TARGET/profiles-templates/" 2>/dev/null || true
 echo "[INIT] 已复制 Hermes profile 模板到 $TARGET/profiles-templates"
-echo "Next: create Hermes profiles themis-observe / themis-execute (see INSTALL.md)"
+echo "下一步（二选一）："
+echo "  hermes profile create themis-observe"
+echo "  hermes profile create themis-execute"
+echo "或将模板分别复制到："
+echo "  ${HERMES_HOME:-$HOME/.hermes}/profiles/themis-observe"
+echo "  ${HERMES_HOME:-$HOME/.hermes}/profiles/themis-execute"
+echo "然后按各模板 README 合并 config.snippet.yaml（详见 INSTALL.md）。"
 
 # Step 4: 检查 .gitignore
 GITIGNORE="$BASE/.gitignore"

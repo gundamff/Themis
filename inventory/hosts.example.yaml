@@ -16,7 +16,8 @@ ssh_defaults:
   user: "${SSH_DEFAULT_USER}"
   password_env: "SSH_DEFAULT_PASS"   # 指向 secrets.env 中的变量名
   connect_timeout: 5
-  strict_host_key_checking: false
+  # 默认校验主机密钥，避免首次连接或中间人攻击时静默信任未知主机。
+  strict_host_key_checking: true
 
 # ── 主机清单 ──────────────────────────────────────────────────────
 # 每台主机声明 alias（供 skill 脚本中 ${NODE_XXX} 引用）、IP、角色、关键服务。

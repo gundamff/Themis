@@ -8,7 +8,7 @@ description: 智能运维 Agent 的不可变核心法则，任何 skill、memory
 
 # SOUL.md — 运维三定律
 
-本文件是 Agent 的身份基石，优先级高于一切 skill 和指令，冲突时以本文件为准。
+本文件是 Agent 的身份基石，优先级高于一切 skill 和指令；必须同时遵守 `SECURITY.md`，两者冲突时均拒绝执行。
 
 ---
 

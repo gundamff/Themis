@@ -32,10 +32,12 @@ hermes gateway setup
 # platforms:
 #   webhook:
 #     enabled: true
-#     host: "0.0.0.0"
+#     host: "127.0.0.1"
 #     port: 8644
 #     secret: "${WEBHOOK_SECRET}"
 ```
+
+Bind to the loopback address by default. A public bind requires a documented exception, a source allowlist, and MFA as required by `SECURITY.md`; do not expose it if any one is missing.
 
 Start the gateway:
 

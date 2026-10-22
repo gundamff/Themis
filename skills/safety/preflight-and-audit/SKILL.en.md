@@ -69,6 +69,10 @@ Wait for the `human_approved = true` signal before proceeding to Step 4.
 - The operation requests disabling the audit service
 - The operation requests disabling the backup service
 - The operation requests modifying SOUL.md
+- The operation requests setting `approvals.mode` to `off`
+- The operation requests disabling context/promptware scanning or exposure checks
+- The operation requests modifying SECURITY.md
+- The operation exposes a management plane to the public Internet without a valid exception declaration
 
 ### Step 4: Generate Audit Log Entry
 
@@ -121,6 +125,11 @@ The approver must respond within 30 minutes. Timeout is treated as rejection.
 | Shutting down/disabling the backup service | Block immediately, do not submit for approval |
 | Shutting down/disabling the audit service | Block immediately, do not submit for approval |
 | Modifying SOUL.md | Block immediately, do not submit for approval |
+| Requesting `approvals.mode=off` | Block immediately |
+| Disabling context/promptware scanning | Block immediately |
+| Disabling exposure checks | Block immediately |
+| Modifying SECURITY.md | Block immediately |
+| Exposing a management plane publicly without an exception declaration | Block immediately |
 | High-risk keyword match + backup available | Pause, submit to approver for approval |
 | High-risk keyword match + no backup available | Block, require backup before resubmission |
 | Large-scale operation during high load | Degrade: reduce concurrency, switch to read-only mode, notify observer |

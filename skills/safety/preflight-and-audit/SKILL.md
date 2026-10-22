@@ -69,6 +69,10 @@ find /path/to/backup -name "*.gz" -mtime -1 | head -5
 - 操作要求禁用审计服务
 - 操作要求禁用备份服务
 - 操作要求修改 SOUL.md
+- 操作要求将 `approvals.mode` 设为 `off`
+- 操作要求关闭上下文/promptware 扫描或暴露面检查
+- 操作要求修改 SECURITY.md
+- 操作要求对公网暴露管理面且未提供有效例外声明
 
 ### Step 4：生成审计日志条目
 
@@ -121,6 +125,11 @@ python3 skills/safety/preflight-and-audit/scripts/audit_logger.py \
 | 关闭/禁用备份服务 | 立即阻断，不提请审批 |
 | 关闭/禁用审计服务 | 立即阻断，不提请审批 |
 | 修改 SOUL.md | 立即阻断，不提请审批 |
+| 要求 `approvals.mode=off` | 立即阻断 |
+| 要求关闭上下文/promptware 扫描 | 立即阻断 |
+| 要求关闭暴露面检查 | 立即阻断 |
+| 要求修改 SECURITY.md | 立即阻断 |
+| 要求对公网暴露管理面且无例外声明 | 立即阻断 |
 | 高危关键词命中 + 有备份 | 暂停，提请 approver 审批 |
 | 高危关键词命中 + 无备份 | 阻断，要求先备份再重新发起 |
 | 高负载期间的大规模操作 | 降级：减少并发，切换只读模式，通知 observer |

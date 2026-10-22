@@ -18,10 +18,14 @@ description: >
 
 # 凭据使用规范
 
+> 本规范服从仓库根目录 `SECURITY.md` 的“密钥不落明文”铁律；
+> 安全边界与禁止项以 `SECURITY.md` 为准，此处只描述凭据加载机制。
+
 ## 架构原则
 
 ```
-config/secrets.env  (真实值，永不提交到 Git)
+Hermes .env / Bitwarden / 1Password / config/secrets.env
+        (secrets provider；真实值永不提交到 Git)
         ↓ 运行时注入
 skill 脚本中的 ${VAR_NAME}  (占位符，可以提交)
         ↓ shell 展开
@@ -29,6 +33,8 @@ skill 脚本中的 ${VAR_NAME}  (占位符，可以提交)
 ```
 
 任何 skill 文件（包括 `.md`、`.sh`、`.py`）中，凭据只能以变量引用形式出现，不得出现实际值。
+生产环境优先使用 Bitwarden、1Password 或其他受控 provider；使用本地
+`config/secrets.env` 时必须保持最小权限并确保其不被 Git 跟踪。
 
 ---
 
